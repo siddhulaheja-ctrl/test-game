@@ -43,7 +43,10 @@ function createWindowProvider(): WindowProvider {
   if (process.env.BUDDY_FAKE_WINDOWS === '1') return new FakeWindows();
   if (process.platform === 'win32') {
     try {
-      return new Win32Windows((r) => screen.screenToDipRect(null, r));
+      return new Win32Windows(
+        (r) => screen.screenToDipRect(null, r),
+        (p) => screen.dipToScreenPoint(p),
+      );
     } catch (err) {
       console.warn('[windows] Win32 window access unavailable:', (err as Error).message);
     }
@@ -281,8 +284,41 @@ function start(): void {
     }
   };
 
+  /** What's under the cursor while a pet is hovered, and how often we had to raise an overlay. */
+  const diag = { under: 'n/a', raised: 0 };
+  let lastCoverCheck = 0;
+  let lastRaise = 0;
+
+  /**
+   * While the cursor is over a pet, make sure clicks will actually reach it: if another window is
+   * on top of the overlay at that point, put the overlay back on top.
+   */
+  function checkCovered(p: { x: number; y: number }): void {
+    const now = Date.now();
+    if (!windows.windowAt || now - lastCoverCheck < 200) return;
+    lastCoverCheck = now;
+    const hovered = [...overlays.values()].find((o) => o.isInteractive() && o.win.isVisible());
+    if (!hovered) {
+      diag.under = 'n/a';
+      return;
+    }
+    let hit: { own: boolean; className: string } | null = null;
+    try {
+      hit = windows.windowAt(p.x, p.y);
+    } catch {
+      hit = null;
+    }
+    diag.under = !hit ? 'nothing' : hit.own ? 'our overlay' : `other (${hit.className || '?'})`;
+    if (hit && !hit.own && now - lastRaise > 1000) {
+      lastRaise = now;
+      diag.raised++;
+      hovered.raise();
+    }
+  }
+
   function pollCursor(): void {
     const p = screen.getCursorScreenPoint();
+    checkCovered(p);
     const left = windows.leftButtonDown();
     const next: CursorPoint =
       left === null ? { x: p.x, y: p.y } : { x: p.x, y: p.y, leftDown: left };
@@ -360,6 +396,8 @@ function start(): void {
     if (covered.join() === fullscreen.join()) return;
     fullscreen = covered;
     applyVisibility();
+    // Fullscreen apps coming and going can knock the overlays off the top: put them back.
+    for (const o of overlays.values()) if (o.win.isVisible()) o.raise();
     for (const id of overlays.keys()) sendTo(id, IPC.displayFlags, { fullscreen });
   }
 
@@ -381,7 +419,7 @@ function start(): void {
           metrics.reduce((sum, p) => sum + (p.memory.privateBytes ?? p.memory.workingSetSize), 0) /
           1024,
       };
-      broadcast(IPC.metrics, m);
+      broadcast(IPC.metrics, { ...m, underCursor: diag.under, raised: diag.raised });
     });
   }
 

@@ -21,6 +21,7 @@ const DWMWA_CLOAKED = 14;
 const VK_LBUTTON = 0x01;
 const VK_RBUTTON = 0x02;
 const SM_SWAPBUTTON = 23;
+const GA_ROOT = 2;
 // SHQueryUserNotificationState results that mean "something fullscreen is in front".
 const QUNS_BUSY = 2;
 const QUNS_RUNNING_D3D_FULL_SCREEN = 3;
@@ -40,6 +41,8 @@ interface Api {
   GetSystemMetrics(idx: number): number;
   DwmGetWindowAttribute(h: Hwnd, attr: number, buf: Buffer, size: number): number;
   SHQueryUserNotificationState(out: number[]): number;
+  WindowFromPoint(pt: { x: number; y: number }): Hwnd;
+  GetAncestor(h: Hwnd, flags: number): Hwnd;
 }
 
 function loadApi(): Api {
@@ -49,6 +52,7 @@ function loadApi(): Api {
   koffi.pointer('HWND', koffi.opaque());
   koffi.struct('RECT', { left: 'int32', top: 'int32', right: 'int32', bottom: 'int32' });
   koffi.proto('bool __stdcall EnumWindowsProc(HWND hwnd, intptr_t lParam)');
+  koffi.struct('POINT', { x: 'int32', y: 'int32' });
   return {
     EnumWindows: user32.func('bool __stdcall EnumWindows(EnumWindowsProc *cb, intptr_t lParam)'),
     IsWindowVisible: user32.func('bool __stdcall IsWindowVisible(HWND h)'),
@@ -62,6 +66,8 @@ function loadApi(): Api {
     DwmGetWindowAttribute: dwmapi.func(
       'long __stdcall DwmGetWindowAttribute(HWND h, uint32 attr, void *pv, uint32 cb)',
     ),
+    WindowFromPoint: user32.func('HWND __stdcall WindowFromPoint(POINT pt)'),
+    GetAncestor: user32.func('HWND __stdcall GetAncestor(HWND h, uint32 flags)'),
     SHQueryUserNotificationState: shell32.func(
       'long __stdcall SHQueryUserNotificationState(_Out_ int *state)',
     ),
@@ -77,8 +83,14 @@ export class Win32Windows implements WindowProvider {
   private readonly rectBuf = Buffer.alloc(16);
   private readonly intBuf = Buffer.alloc(4);
 
-  /** `toDip` converts physical screen pixels to DIP (Electron's screen.screenToDipRect). */
-  constructor(private readonly toDip: (r: Rect) => Rect) {
+  /**
+   * `toDip` converts physical screen pixels to DIP (Electron's screen.screenToDipRect) and
+   * `toPhysical` a DIP point to physical pixels (screen.dipToScreenPoint).
+   */
+  constructor(
+    private readonly toDip: (r: Rect) => Rect,
+    private readonly toPhysical: (p: { x: number; y: number }) => { x: number; y: number },
+  ) {
     this.api = loadApi();
   }
 
@@ -138,6 +150,15 @@ export class Win32Windows implements WindowProvider {
     // Main decides which display it covers; report the foreground rectangle when the shell says
     // something is fullscreen, or when it may cover a whole display on its own.
     return r && (busy || r.width >= 640) ? [this.toDip(r)] : [];
+  }
+
+  windowAt(x: number, y: number): { own: boolean; className: string } | null {
+    const pt = this.toPhysical({ x, y });
+    const h = this.api.WindowFromPoint({ x: Math.round(pt.x), y: Math.round(pt.y) });
+    if (!h || koffi.address(h) === 0n) return null;
+    const root = this.api.GetAncestor(h, GA_ROOT) ?? h;
+    const id = (koffi.address(root) as bigint).toString(16);
+    return { own: this.own.has(id), className: this.className(root) };
   }
 
   leftButtonDown(): boolean | null {

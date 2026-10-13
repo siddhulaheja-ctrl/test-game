@@ -98,9 +98,24 @@ export class OverlayWindow {
     this.interactive = false;
     this.lastApplied = Date.now();
     this.win.setIgnoreMouseEvents(true, { forward: true });
-    this.win.setAlwaysOnTop(true, 'screen-saver');
+    this.raise();
     this.win.webContents.send(IPC.inputReset);
   }
+
+  /**
+   * Put the window back on top of everything. Windows can quietly drop a topmost window below
+   * others after a fullscreen app, and asking again with the same level is ignored, so toggle it.
+   */
+  raise(): void {
+    if (this.win.isDestroyed()) return;
+    this.win.setAlwaysOnTop(false);
+    this.win.setAlwaysOnTop(true, 'screen-saver');
+    this.win.moveTop();
+    this.raises++;
+  }
+
+  /** How many times this window has been put back on top (tests and diagnostics). */
+  raises = 0;
 
   /** Native handle as a hex id (matches WindowProvider ids), to keep overlays out of window lists. */
   nativeId(): string {

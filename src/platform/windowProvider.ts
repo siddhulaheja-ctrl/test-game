@@ -20,6 +20,11 @@ export interface WindowProvider {
   leftButtonDown(): boolean | null;
   /** Window handles of our own overlays, so they are never listed. */
   setOwnWindows(ids: string[]): void;
+  /**
+   * Which top-level window would get a click at a desktop point (DIP): one of ours or another
+   * (by class name only). Optional; used to notice when something covers the pets.
+   */
+  windowAt?(x: number, y: number): { own: boolean; className: string } | null;
 }
 
 /** Raw facts about a top-level window, before filtering. */
@@ -98,6 +103,13 @@ export class FakeWindows implements WindowProvider {
   readonly name = 'fake';
   windows: WindowInfo[] = [];
   fullscreenRects: Rect[] = [];
+  /** Pretend another app's window sits on top of the overlays (tests the re-raise). */
+  covered = false;
+  windowAt(): { own: boolean; className: string } | null {
+    return this.covered
+      ? { own: false, className: 'FakeCover' }
+      : { own: true, className: 'Overlay' };
+  }
   list(): WindowInfo[] {
     return this.windows.map((w) => ({ id: w.id, bounds: { ...w.bounds } }));
   }

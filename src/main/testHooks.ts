@@ -31,6 +31,8 @@ export interface BuddyTestHooks {
   setFullscreen(rects: Rect[]): void;
   petOwners(): Record<string, number>;
   fullscreenDisplays(): number[];
+  setCovered(on: boolean): void;
+  raises(): number;
 }
 
 /**
@@ -76,6 +78,10 @@ export function installTestHooks(deps: HookDeps): void {
       deps.pollNow();
     },
     petOwners: () => deps.owners(),
+    setCovered: (on) => {
+      fake().covered = on;
+    },
+    raises: () => deps.overlays().reduce((n, o) => n + o.raises, 0),
     fullscreenDisplays: () => deps.fullscreen(),
   };
   (globalThis as unknown as { __buddyTest: BuddyTestHooks }).__buddyTest = hooks;

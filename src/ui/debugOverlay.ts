@@ -49,6 +49,9 @@ export class DebugOverlay {
       `FPS  ${fps.toFixed(0).padStart(3)}${idle ? '  (idle)' : ''}`,
       `CPU  ${this.metrics ? this.metrics.cpuPercent.toFixed(1).padStart(5) + ' %' : '   …'}`,
       `RAM  ${this.metrics ? this.metrics.memoryMB.toFixed(0).padStart(5) + ' MB' : '   …'}`,
+      ...(this.metrics?.underCursor !== undefined
+        ? [`win  under cursor: ${this.metrics.underCursor}, re-raised ${this.metrics.raised ?? 0}×`]
+        : []),
       ...Object.entries(this.extra).map(([k, v]) => `${k.padEnd(4)} ${v}`),
     ];
     const text = lines.join('\n');

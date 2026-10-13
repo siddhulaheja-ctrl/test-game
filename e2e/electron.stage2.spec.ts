@@ -256,3 +256,27 @@ test('pets can still be grabbed after a fullscreen app hid and showed the overla
   await hover();
   await expect.poll(() => hooks((h) => h.isInteractive())).toBe(true);
 });
+
+test('if another window covers a hovered pet, the overlay is put back on top', async () => {
+  const page = await overlayFor(1);
+  await expect.poll(async () => (await ov(page, (o) => o.pets())).length).toBe(2);
+  await ov(page, (o) => o.hold(60));
+  const before = await hooks((h) => h.raises());
+  await hooks((h) => h.setCovered(true));
+  const c = await ov(page, (o) => o.petCenter());
+  await page.evaluate(
+    ([x, y]) => (window as unknown as { __overlay: OverlayHooks }).__overlay.simulateCursor(x, y),
+    [c.x, c.y] as const,
+  );
+  await expect.poll(() => hooks((h) => h.isInteractive())).toBe(true);
+  // Main checks what is under the real cursor; point it at the pet through the test hook path.
+  await app.evaluate(
+    ({ screen }, [x, y]) => {
+      (
+        screen as unknown as { getCursorScreenPoint(): { x: number; y: number } }
+      ).getCursorScreenPoint = () => ({ x, y });
+    },
+    [c.x, c.y] as const,
+  );
+  await expect.poll(() => hooks((h) => h.raises()), { timeout: 5000 }).toBeGreaterThan(before);
+});

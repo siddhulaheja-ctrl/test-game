@@ -107,8 +107,11 @@ export interface DisplayFlags {
 export interface ProcessMetrics {
   /** Sum of CPU percent across all app processes (100 = one full core). */
   cpuPercent: number;
-  /** Sum of working set across all app processes, in MB. */
+  /** Sum of private memory (working set where unavailable) across all app processes, in MB. */
   memoryMB: number;
+  /** Diagnostics: the window under the cursor while a pet is hovered, and overlay re-raises. */
+  underCursor?: string;
+  raised?: number;
 }
 
 export const IPC = {
