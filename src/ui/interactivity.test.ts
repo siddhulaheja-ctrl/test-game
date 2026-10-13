@@ -15,12 +15,12 @@ describe('InteractivityTracker', () => {
 
   it('uses hysteresis at the edge', () => {
     const t = new InteractivityTracker(() => {});
-    t.update({ x: 145, y: 100 }, shape); // 5px outside: not yet
+    t.update({ x: 155, y: 100 }, shape); // 15px outside: not yet
     expect(t.isInteractive).toBe(false);
     t.update({ x: 139, y: 100 }, shape); // inside
-    t.update({ x: 145, y: 100 }, shape); // 5px outside: still interactive
+    t.update({ x: 155, y: 100 }, shape); // 15px outside: still interactive
     expect(t.isInteractive).toBe(true);
-    t.update({ x: 160, y: 100 }, shape); // 20px outside: release
+    t.update({ x: 165, y: 100 }, shape); // 25px outside: release
     expect(t.isInteractive).toBe(false);
   });
 

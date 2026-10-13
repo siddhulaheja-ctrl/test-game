@@ -16,8 +16,8 @@ export class InteractivityTracker {
 
   constructor(
     private readonly onChange: (interactive: boolean) => void,
-    private readonly enterMargin = 2,
-    private readonly exitMargin = 10,
+    private readonly enterMargin = 10,
+    private readonly exitMargin = 18,
   ) {}
 
   get isInteractive(): boolean {

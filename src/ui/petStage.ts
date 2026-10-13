@@ -157,7 +157,8 @@ export class PetStage {
 
   /** Returns true if the press landed on a pet. */
   pointerDown(p: Vec2): boolean {
-    const pet = this.petAt(p, 2);
+    // Forgiving: a press just outside a (possibly moving) pet still grabs it.
+    const pet = this.petAt(p, 10);
     if (!pet) return false;
     this.press = { pet, at: { ...p } };
     return true;

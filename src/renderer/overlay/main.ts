@@ -84,6 +84,13 @@ function reportWatched(dt: number): void {
 // --- Loop ---------------------------------------------------------------------------------------
 function update(dt: number): void {
   stage.update(dt);
+  if (debug.visible) {
+    debug.set(
+      'ptr',
+      `${interactivity.isInteractive ? 'over a pet' : 'click-through'}, press: ${lastPress}`,
+    );
+    debug.set('pets', stage.pets.map((p) => `${p.id} ${p.state}`).join(', ') || 'none');
+  }
   reportWatched(dt);
   if (stage.activity() > 0.05) loop.markActive();
   refreshInteractivity();
@@ -132,9 +139,14 @@ bridge?.onCursor((p) => {
   // Windows reports the button globally: a release anywhere ends a drag.
   if (p.leftDown === false && stage.isDragging) stage.pointerUp({ x: p.x, y: p.y });
 });
+/** Last press, for the debug overlay (helps diagnose input on a real desktop). */
+let lastPress = 'none';
 function mouseDown(x: number, y: number): void {
-  if (!interactivity.isInteractive) return;
-  stage.pointerDown(toDesk(x, y));
+  if (!interactivity.isInteractive) {
+    lastPress = 'ignored (click-through)';
+    return;
+  }
+  lastPress = stage.pointerDown(toDesk(x, y)) ? 'on a pet' : 'missed';
   loop.markActive();
 }
 function mouseUp(x: number, y: number): void {

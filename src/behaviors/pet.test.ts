@@ -92,19 +92,33 @@ describe('Pet', () => {
     expect(pet.brain.history).not.toContain('react:startled');
   });
 
-  it('runs away from a cursor that dashes at it', () => {
+  it('runs away from a cursor that zooms past it', () => {
     const world = new World({ displays: [display(1, 0)], windows: [], safeZones: [] });
     const pet = makePet('cat', world);
     run(pet, 0.5);
     const { x, y } = pet.center;
-    for (let i = 0; i < 5; i++) {
-      pet.cursor.feed({ x: x - 330 + i * 60, y });
+    for (let i = 0; i < 6; i++) {
+      pet.cursor.feed({ x: x - 120, y: y - 240 + i * 60 });
       pet.cursor.update(1 / 60);
     }
     pet.update(DT, { quiet: false, others: [] });
     expect(pet.brain.history).toContain('react:startled');
     run(pet, 1);
     expect(pet.brain.current?.name).toBe('flee');
+  });
+
+  it('stops and looks up when the cursor rests on it, so it can be picked up', () => {
+    const world = new World({ displays: [display(1, 0)], windows: [], safeZones: [] });
+    const pet = makePet('cat', world);
+    pet.brain.interrupt(pet);
+    run(pet, 0.2);
+    const { x, y } = pet.center;
+    pet.cursor.feed({ x: x + 5, y });
+    pet.update(DT, { quiet: false, others: [] });
+    expect(pet.brain.current?.name).toBe('noticed');
+    const before = pet.mover.x;
+    run(pet, 2);
+    expect(pet.mover.x).toBe(before);
   });
 });
 

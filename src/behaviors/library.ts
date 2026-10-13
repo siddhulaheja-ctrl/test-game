@@ -567,6 +567,27 @@ export class Follow implements Behavior {
   }
 }
 
+/** The cursor is resting on it: stand still and look up at it until it moves off. */
+export class Noticed implements Behavior {
+  readonly name = 'noticed';
+  readonly state = 'idle';
+  readonly interruptible = true;
+  private away = 0;
+  start(pet: Pet): void {
+    pet.mood('curious', 0.5);
+  }
+  update(pet: Pet, dt: number): boolean {
+    const c = pet.cursor;
+    if (c.pos) pet.creature.lookAt(c.pos);
+    const on = c.pos && pet.creature.hitShape().distanceOutside(c.pos.x, c.pos.y) < 40;
+    this.away = on ? 0 : this.away + dt;
+    return this.away > 0.8 || pet.mover.contact.kind !== 'surface';
+  }
+  stop(pet: Pet): void {
+    pet.mood(null);
+  }
+}
+
 /** Short reactions: a startle, curiosity, dizziness after a hard landing, pride after a pounce. */
 export class React implements Behavior {
   readonly state = 'react';
@@ -773,10 +794,19 @@ export function reflexes(pet: Pet): void {
   if (!c.pos) return;
   const dist = c.distanceTo(pet.center.x, pet.center.y);
 
-  // A fast cursor nearby: startle, then run (or just flinch in Quiet Mode). Not when it lands on
-  // the pet: that's someone reaching to pick it up.
-  const onPet = pet.creature.hitShape().distanceOutside(c.pos.x, c.pos.y) < 12;
-  if (c.burst > 1700 && dist < 230 * pet.size + 60 && !onPet && !pet.cooling('flee')) {
+  // The cursor resting on the pet: stop and look up at it (makes it easy to pick up).
+  const onPet = pet.creature.hitShape().distanceOutside(c.pos.x, c.pos.y) < 14;
+  if (onPet) {
+    if (b?.name !== 'noticed') pet.brain.interrupt(pet, new Noticed());
+    return;
+  }
+
+  // A fast cursor zooming past: startle, then run (or just flinch in Quiet Mode). Not when it is
+  // heading for the pet: that's someone reaching to pick it up.
+  const toPet = { x: pet.center.x - c.pos.x, y: pet.center.y - c.pos.y };
+  const heading = (c.vel.x * toPet.x + c.vel.y * toPet.y) / Math.max(1, c.speed * dist);
+  const dashing = c.burst > 2000 && c.speed > 900 && heading < 0.35;
+  if (dashing && dist < 230 * pet.size + 60 && !pet.cooling('flee')) {
     pet.cool('flee', 6);
     if (pet.quiet) {
       pet.brain.interrupt(pet, new React('startled'));
