@@ -5,7 +5,7 @@ import { Creature } from '../creature/creature';
 import type { Expression } from '../creature/face';
 import type { Movement } from '../creature/species/types';
 import type { Reach } from '../world/route';
-import type { World} from '../world/world';
+import type { World } from '../world/world';
 import { type Surface } from '../world/world';
 import { Brain, type BehaviorState } from './brain';
 import type { CursorSense } from './cursorSense';
