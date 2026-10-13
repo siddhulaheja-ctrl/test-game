@@ -5,11 +5,12 @@ import type { SpeciesDef } from './types';
  * register more through the same call.
  */
 const registry = new Map<string, SpeciesDef>();
-let defaultId = 'glorp';
+/** Set by the first registration (or explicitly with `isDefault`). */
+let defaultId = '';
 
 export function registerSpecies(def: SpeciesDef, opts: { isDefault?: boolean } = {}): void {
   registry.set(def.id, def);
-  if (opts.isDefault) defaultId = def.id;
+  if (opts.isDefault || !defaultId) defaultId = def.id;
 }
 
 export function getSpecies(id: string | undefined): SpeciesDef {

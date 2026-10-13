@@ -7,7 +7,7 @@ import { JsonStore } from './jsonStore';
 describe('JsonStore', () => {
   let dir: string;
   beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'glorp-store-'));
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'buddy-store-'));
   });
   afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 

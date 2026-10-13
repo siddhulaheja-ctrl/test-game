@@ -36,7 +36,7 @@ export const FIDGETS: readonly FidgetKind[] = [
 /** Hooks the animator calls for effects it can't produce itself (physics, particles). */
 export interface AnimatorHost {
   squash(amount: number): void;
-  kickAntennae(vx: number, vy: number): void;
+  kickChains(vx: number, vy: number): void;
 }
 
 interface Timed {
@@ -153,7 +153,7 @@ export class IdleAnimator {
       blep: 1.4,
     };
     this.fidget = { t: 0, duration: durations[kind], kind, dir: this.rng.chance(0.5) ? 1 : -1 };
-    if (kind === 'wiggle') this.host.kickAntennae(this.fidget.dir * 3.5, -1.5);
+    if (kind === 'wiggle') this.host.kickChains(this.fidget.dir * 3.5, -1.5);
     if (kind === 'bounce') this.host.squash(0.12);
   }
 

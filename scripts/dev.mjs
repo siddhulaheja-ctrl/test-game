@@ -18,7 +18,7 @@ let restartTimer = null;
 const launch = () => {
   electron = spawn(String(electronPath), ['.', ...process.argv.slice(2)], {
     stdio: 'inherit',
-    env: { ...process.env, GLORP_DEV_SERVER_URL: url },
+    env: { ...process.env, BUDDY_DEV_SERVER_URL: url },
   });
   electron.on('exit', (code, signal) => {
     if (signal !== 'SIGTERM') shutdown(code ?? 0);

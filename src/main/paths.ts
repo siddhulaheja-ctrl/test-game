@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 /** Vite dev server URL in development (`npm run dev`), unset in production builds. */
-export const devServerUrl = process.env.GLORP_DEV_SERVER_URL;
+export const devServerUrl = process.env.BUDDY_DEV_SERVER_URL;
 
 /** Bundled preload script (built next to the main bundle). */
 export const preloadPath = path.join(__dirname, '../preload/index.cjs');

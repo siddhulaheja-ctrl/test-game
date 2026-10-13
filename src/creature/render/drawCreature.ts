@@ -2,8 +2,6 @@ import type { Creature } from '../creature';
 import { drawParticles } from './drawParticles';
 import { drawShadow } from './parts';
 
-export { bodyOutline } from './parts';
-
 /** Draw the creature (any species) and its particles at its current pose. */
 export function drawCreature(ctx: CanvasRenderingContext2D, creature: Creature): void {
   const pose = creature.getPose();

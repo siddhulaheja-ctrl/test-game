@@ -1,10 +1,10 @@
-# Glorp
+# Desktop Buddy
 
-A living desktop companion. Glorp is a small jelly creature drawn entirely in code. It sits on top of your desktop in a transparent window, and clicks pass straight through everywhere except on Glorp itself.
+A living desktop companion. Characters are drawn entirely in code and live on top of your desktop in a transparent window. Clicks pass straight through everywhere except on the character itself.
 
-![Glorp's nine expressions](docs/images/expressions.png)
+The first character is a fan version of **P.E.K.K.A** from Supercell's Clash games:
 
-![Palettes, eye styles, body shapes and accessories](docs/images/looks.png)
+![P.E.K.K.A drawn in code](docs/images/pekka.png)
 
 > Status: early development. See [`PROGRESS.md`](PROGRESS.md) for what works today and [`DECISIONS.md`](DECISIONS.md) for why things are built the way they are.
 
@@ -20,17 +20,17 @@ npm install
 npm run dev      # Electron + hot reload (renderer HMR, main/preload auto-restart)
 ```
 
-Glorp appears near the bottom-right of your primary screen, with an icon in the system tray:
+Your buddy appears near the bottom-right of your primary screen, with an icon in the system tray:
 
-| Tray item         | What it does                                                                |
-| ----------------- | --------------------------------------------------------------------------- |
-| Hide / Show Glorp | Removes Glorp from the desktop (left-clicking the tray icon does the same). |
-| Quiet Mode        | Glorp dims and stays calm.                                                  |
-| Debug Overlay     | FPS, CPU and RAM in the top-left corner.                                    |
-| Creature Lab…     | Opens the lab, with sliders and buttons for every expression and animation. |
-| Quit Glorp        | Exits.                                                                      |
+| Tray item          | What it does                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| Hide / Show Buddy  | Removes the character from the desktop (left-clicking the tray icon does the same). |
+| Quiet Mode         | The character dims and stays calm.                                                  |
+| Debug Overlay      | FPS, CPU and RAM in the top-left corner.                                            |
+| Creature Lab…      | Opens the lab, with sliders and buttons for every expression and animation.         |
+| Quit Desktop Buddy | Exits.                                                                              |
 
-The **creature lab** has buttons and sliders for every expression, animation, particle, palette, eye style, body shape and accessory. Click Glorp there to poke it. To work on visuals in a plain browser without Electron:
+The **creature lab** has a character picker plus buttons and sliders for every expression, animation, particle and palette. Click the character there to poke it. To work on visuals in a plain browser without Electron:
 
 ```bash
 npm run lab      # opens http://localhost:5173/lab/index.html
@@ -50,4 +50,8 @@ npm run lab      # opens http://localhost:5173/lab/index.html
 
 ## Privacy
 
-Everything stays on your machine. Glorp never records what you type, what is on screen, or your clipboard. Senses that read activity (added in later stages) report **rates only** and can each be switched off.
+Everything stays on your machine. Desktop Buddy never records what you type, what is on screen, or your clipboard. Senses that read activity (added in later stages) report **rates only** and can each be switched off.
+
+## Fan content
+
+P.E.K.K.A is © Supercell. This project is non-commercial fan content and is not affiliated with, endorsed, sponsored or approved by Supercell. See [Supercell's Fan Content Policy](https://supercell.com/en/fan-content-policy/).

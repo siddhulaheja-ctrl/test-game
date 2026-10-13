@@ -1,11 +1,10 @@
-import { GLORP } from './glorp';
 import { PEKKA } from './pekka';
 import { registerSpecies } from './registry';
 
-/** Built-in species. Importing this module registers them. */
-export const BUILT_IN_SPECIES = [GLORP, PEKKA] as const;
+/** Built-in characters. Importing this module registers them; the first one is the default. */
+export const BUILT_IN_SPECIES = [PEKKA] as const;
 
-registerSpecies(GLORP, { isDefault: true });
+registerSpecies(PEKKA, { isDefault: true });
 for (const s of BUILT_IN_SPECIES) registerSpecies(s);
 
 export { getSpecies, listSpecies, registerSpecies } from './registry';

@@ -2,7 +2,7 @@ import type { Vec2 } from '../math';
 
 /**
  * A verlet rope pinned at its root and pulled toward a rest pose ("shape matching").
- * Used for antennae, the scarf tail and similar dangly bits: the root follows the body exactly, the
+ * Used for antennae, tails and similar dangly bits: the root follows the body exactly, the
  * rest of the chain lags and wobbles.
  */
 export class VerletChain {

@@ -8,9 +8,9 @@ import {
   type ElectronApplication,
   type Page,
 } from '@playwright/test';
-import type { GlorpTestHooks } from '../src/main/testHooks';
+import type { BuddyTestHooks } from '../src/main/testHooks';
 
-type Hooks = { __glorpTest: GlorpTestHooks };
+type Hooks = { __buddyTest: BuddyTestHooks };
 
 interface OverlayHooks {
   simulateCursor(x: number, y: number): void;
@@ -22,20 +22,20 @@ let app: ElectronApplication;
 let overlay: Page;
 let userData: string;
 
-const hooks = <R>(fn: (h: GlorpTestHooks) => R) =>
+const hooks = <R>(fn: (h: BuddyTestHooks) => R) =>
   app.evaluate((_electron, src) => {
     const f = new Function('h', `return (${src})(h)`) as (h: unknown) => unknown;
-    return f((globalThis as unknown as Hooks).__glorpTest);
+    return f((globalThis as unknown as Hooks).__buddyTest);
   }, fn.toString()) as Promise<Awaited<R>>;
 
 test.beforeEach(async () => {
-  userData = fs.mkdtempSync(path.join(os.tmpdir(), 'glorp-e2e-'));
+  userData = fs.mkdtempSync(path.join(os.tmpdir(), 'buddy-e2e-'));
   app = await electron.launch({
     args: ['.', '--no-sandbox'],
-    env: { ...process.env, GLORP_E2E: '1', GLORP_USER_DATA: userData },
+    env: { ...process.env, BUDDY_E2E: '1', BUDDY_USER_DATA: userData },
   });
   overlay = await app.firstWindow();
-  await overlay.waitForFunction(() => 'glorp' in window && '__overlay' in window);
+  await overlay.waitForFunction(() => 'buddy' in window && '__overlay' in window);
   await expect.poll(() => hooks((h) => h.overlayVisible())).toBe(true);
 });
 

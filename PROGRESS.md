@@ -14,39 +14,21 @@
 
 ## Stage 1: The body ✅
 
-- Glorp is drawn entirely in code. The body is a soft ring of 20 radial springs, drawn as a smooth closed spline.
-  - Shading: light/body/shade gradient, ground occlusion, pale belly, freckles, an inner-edge shadow, bounce light, a big soft highlight plus a sharp glint, and a thick rounded outline.
-  - Small feet and nub arms. Two verlet antennae with glowing bobbles; the left one is always a bit floppier.
-- Squash and stretch on hops (crouch, launch, airborne stretch, landing squash with dust), pokes and fidgets. The jelly wobbles locally, and the face lags slightly behind the body.
-- Idle life, all from a seeded RNG:
-  - breathing, slower and deeper when sleepy
-  - random blinks with occasional doubles
-  - eye saccades, plus face parallax toward where it looks
-  - fidgets: wiggle, bounce, sway, look around, wave, blep
-  - yawns, more frequent when sleepy
-- Nine expressions (neutral, happy, sad, sleepy, surprised, annoyed, curious, excited, scared) on 16 parametric face values. Any mix blends exactly, and short reactions fade back to the base mood.
-- Particles: sparkles, hearts, sweat, zzz, music notes, dust, "!" and "?".
-- Customisation model, validated and saveable:
-  - 5 palettes: Pond Mint, Peach Fuzz, Lilac Dream, Midnight Jelly, Lemon Drop
-  - 4 eye styles: glossy, bean, mismatched (heterochromia), lashes
-  - 4 body shapes: classic, tall bean, squishy mochi, droplet
-  - 7 accessories, one per slot: knit beanie with a spring pom-pom, tiny crown, headphones, round glasses, striped scarf with a dangling tail, ribbon bow, antenna daisy
-  - a size option for the accessibility "large creature" setting later
-- Creature lab (`npm run lab`, or "Creature Lab…" in the tray):
-  - appearance pickers
-  - expression buttons (Shift-click for a short reaction) and blend sliders
-  - manual sliders for every face value
-  - buttons for every animation, fidget, look direction and particle
-  - background, zoom, slow motion, pause and step
-  - settings survive hot reloads
-- The overlay now shows the real Glorp in place of the placeholder. Click it to poke it. Quiet Mode dims it, calms the fidgets and turns off particles. The frame rate drops to the idle rate once it stops moving.
-- Tests:
-  - 56 unit tests covering expression blending, the mixer, soft-ring stability, blink and yawn statistics, determinism, particles, hop physics, antenna lag and appearance validation
-  - 26 lab screenshot tests (13 per project: 1x and 2x) covering every expression, palette, eye style, body shape, accessory, animation and particle type
-  - checks that canvas resolution matches the device pixel ratio, and a lab smoke test
+- **Shared creature engine** for every character:
+  - squash and stretch, hops with anticipation and dust on landing, pokes, a stiffness-scaled spring ring, optional verlet dangly chains, hover for floating characters
+  - idle life from a seeded RNG: breathing, random blinks (sometimes double), eye saccades, fidgets (wiggle, bounce, sway, look around, wave, blep), yawns
+  - nine blendable expressions (neutral, happy, sad, sleepy, surprised, annoyed, curious, excited, scared) on 16 face values, plus short reactions that fade back to the base mood
+  - particles: sparkles, hearts, sweat, zzz, music notes, dust, "!", "?" and butterflies
+- **Character system** (`src/creature/species/`): each character supplies its envelope, palettes (generic colour roles), stiffness, resting face bias and renderer. The lab has a character picker.
+- **P.E.K.K.A (fan version)**, replicating the owner's reference art: rounded helmet with triangular eye sockets and ringed eyes, crescent horns, faceted chest plate with a gem plaque, spiked shoulder spheres, twin striped swords, far-apart disc feet. Five palettes: Reference Steel, Classic Violet, Arena Blue, Arena Red, Max Level Amber.
+- **Creature lab** (`npm run lab`, or "Creature Lab…" in the tray): character and palette pickers, expression buttons and blend sliders, manual face sliders, buttons for every animation, fidget, look direction and particle, background, zoom, slow motion, pause and step. Settings survive hot reloads.
+- The overlay shows the character; click it to poke it. Quiet Mode dims it, calms fidgets and turns off particles.
+- **History:** the first character, Glorp (a jelly blob), was removed at the owner's request, and the app was renamed **Desktop Buddy**.
 
 ## Next
 
+- Finish PEKKA: polish every expression and animation for her, then screenshot tests.
+- Next character: chosen by the owner.
 - Stage 2: movement and screen interaction (behaviour state machine, walking, jumping, `WindowProvider` for Windows, cursor play, dragging and throwing, multiple monitors, fullscreen detection).
 
 ## Known issues

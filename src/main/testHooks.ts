@@ -1,17 +1,17 @@
 import type { MenuItem } from 'electron';
 import type { AppState } from '../shared/ipc';
 import type { OverlayWindow } from './overlayWindow';
-import type { GlorpTray } from './tray';
+import type { BuddyTray } from './tray';
 
 interface HookDeps {
   overlay: OverlayWindow;
-  tray: GlorpTray;
+  tray: BuddyTray;
   getState(): AppState;
   setState(patch: Partial<AppState>): void;
   openLab(): void;
 }
 
-export interface GlorpTestHooks {
+export interface BuddyTestHooks {
   trayMenu(): { id: string; label: string; checked: boolean }[];
   clickTrayItem(id: string): void;
   isInteractive(): boolean;
@@ -21,12 +21,12 @@ export interface GlorpTestHooks {
 }
 
 /**
- * End-to-end test hooks, only installed when GLORP_E2E=1.
- * Playwright reads them with `electronApp.evaluate(() => globalThis.__glorpTest…)`.
+ * End-to-end test hooks, only installed when BUDDY_E2E=1.
+ * Playwright reads them with `electronApp.evaluate(() => globalThis.__buddyTest…)`.
  */
 export function installTestHooks(deps: HookDeps): void {
   const items = (): MenuItem[] => deps.tray.getMenu()?.items ?? [];
-  const hooks: GlorpTestHooks = {
+  const hooks: BuddyTestHooks = {
     trayMenu: () =>
       items()
         .filter((i) => i.type !== 'separator')
@@ -42,5 +42,5 @@ export function installTestHooks(deps: HookDeps): void {
     overlayVisible: () => deps.overlay.win.isVisible(),
     state: () => deps.getState(),
   };
-  (globalThis as unknown as { __glorpTest: GlorpTestHooks }).__glorpTest = hooks;
+  (globalThis as unknown as { __buddyTest: BuddyTestHooks }).__buddyTest = hooks;
 }

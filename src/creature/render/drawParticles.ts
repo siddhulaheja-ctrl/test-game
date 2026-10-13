@@ -96,7 +96,7 @@ function drawOne(ctx: CanvasRenderingContext2D, p: Particle, pal: Palette): void
     case 'note': {
       const r = s * 0.28;
       ctx.translate(Math.sin(p.age * 4 + p.seed * 6) * s * 0.3, 0);
-      const col = p.seed > 0.5 ? pal.accent : mix(pal.accent, pal.cheek, 0.6);
+      const col = p.seed > 0.5 ? pal.accent : pal.accent2;
       ctx.strokeStyle = mix(col, pal.outline, 0.6);
       ctx.fillStyle = col;
       ctx.lineWidth = outlineW * 0.6;
@@ -141,7 +141,7 @@ function drawOne(ctx: CanvasRenderingContext2D, p: Particle, pal: Palette): void
       ctx.translate(Math.sin(p.age * 2.3 + p.seed * 9) * s * 0.9, 0);
       ctx.rotate(Math.sin(p.age * 1.7 + p.seed * 4) * 0.35);
       const flap = 0.25 + 0.75 * Math.abs(Math.sin(p.age * 15 + p.seed * 20));
-      const wing = p.seed > 0.5 ? pal.accent : mix(pal.cheek, '#b58bff', 0.5);
+      const wing = p.seed > 0.5 ? pal.accent : pal.accent2;
       const edge = mix(wing, '#2a1f3d', 0.6);
       ctx.lineWidth = outlineW * 0.5;
       ctx.strokeStyle = edge;

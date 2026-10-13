@@ -7,7 +7,7 @@ import { drawCreature } from '../../creature/render/drawCreature';
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
-const bridge = window.glorp;
+const bridge = window.buddy;
 
 let appState: AppState = { ...DEFAULT_APP_STATE };
 let cursor: CursorPoint | null = null;

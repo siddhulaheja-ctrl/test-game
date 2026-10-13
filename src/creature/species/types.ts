@@ -1,9 +1,9 @@
-import type { AccessoryId, BodyShape, BodyShapeId, EyeStyleId, Palette } from '../appearance';
+import type { BodyShape, Palette } from '../appearance';
 import type { Creature, CreaturePose } from '../creature';
 import type { FaceParams } from '../face';
 
 /**
- * A dangly chain attached to the body outline (antennae, gills, flame tongues, a robot aerial).
+ * A dangly chain attached to the body outline (antennae, gills, tails, cables).
  * Simulated as a verlet rope that lags behind the body and is pulled toward its rest pose.
  */
 export interface DanglyDef {
@@ -17,30 +17,20 @@ export interface DanglyDef {
   curl: number;
   /** Extra bend per segment at full droop (signed; same sign as `curl` to droop outward). */
   droopCurl: number;
-  /** Constant droop added to the face's droop (the floppy left antenna). */
+  /** Constant droop added to the face's droop. */
   droopBias?: number;
   segments: number;
   /** Segment length in units of body radius. */
   segLen: number;
   stiffness?: number;
   friction?: number;
-  /** px/s² (negative floats upward, for flames). */
+  /** px/s² (negative floats upward). */
   gravity?: number;
-}
-
-/** Placement of the generic face parts, in units of body radius from the body centre. */
-export interface FaceLayout {
-  eyeY: number;
-  mouthY: number;
-  cheekX: number;
-  cheekY: number;
-  /** Multiplies eye size and spacing of the chosen eye style. */
-  eyeScale: number;
 }
 
 /**
  * A playable character. Physics, expressions, idle animation and behaviours are shared by every
- * species; a species supplies its shape, its dangly bits, its palettes and how it is drawn.
+ * species; a species supplies its envelope, any dangly bits, its palettes and how it is drawn.
  */
 export interface SpeciesDef {
   id: string;
@@ -51,37 +41,19 @@ export interface SpeciesDef {
   personality: string;
   palettes: Record<string, Palette>;
   defaultPalette: string;
-  /** Fixed rest shape. If absent, the appearance's body shape is used (Glorp). */
-  shape?: BodyShape;
-  /** Body shapes the user may pick (only when `shape` is absent). */
-  bodyShapes?: readonly BodyShapeId[];
-  /** Eye styles the user may pick for the generic face (first is the default). Empty = custom face. */
-  eyeStyles: readonly EyeStyleId[];
-  /** Accessories this species can wear. */
-  accessories: readonly AccessoryId[];
+  /** Hit-test / shadow envelope. */
+  shape: BodyShape;
   dangly: readonly DanglyDef[];
-  faceLayout?: Partial<FaceLayout>;
-  /** Jelly softness (1 = Glorp). Lower is stiffer (armour, robots). */
+  /** Softness of the body's spring ring (1 = jelly). Lower is stiffer (armour, robots). */
   softness?: number;
   /** Floats this far above the ground (units of body radius) and bobs gently. */
   hover?: number;
   /** Ground shadow width multiplier. */
   shadowScale?: number;
-  /** Added to the blended face every frame (e.g. the axolotl's permanently wide smile). */
+  /** Added to the blended face every frame (a character's resting look, e.g. a stern slant). */
   faceBias?: Partial<FaceParams>;
-  /** Per-species simulation extras (flicker, blinking lights, spawning sparks). */
+  /** Per-species simulation extras (flicker, blinking lights, spawning particles). */
   update?(creature: Creature, dt: number): void;
-  /**
-   * Draw everything except the ground shadow and particles, in world space.
-   * Use `creature.toWorld` / the pose transform helpers in `render/parts.ts`.
-   */
+  /** Draw everything except the ground shadow and particles, in world space. */
   draw(ctx: CanvasRenderingContext2D, creature: Creature, pose: CreaturePose): void;
 }
-
-export const DEFAULT_FACE_LAYOUT: FaceLayout = {
-  eyeY: -0.04,
-  mouthY: 0.3,
-  cheekX: 0.6,
-  cheekY: 0.2,
-  eyeScale: 1,
-};

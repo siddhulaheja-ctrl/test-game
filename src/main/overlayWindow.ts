@@ -31,7 +31,7 @@ export class OverlayWindow {
       // Never take keyboard focus away from whatever the user is doing.
       focusable: false,
       alwaysOnTop: true,
-      title: 'Glorp',
+      title: 'Desktop Buddy',
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,

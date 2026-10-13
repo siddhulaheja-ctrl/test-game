@@ -3,7 +3,7 @@ import {
   IPC,
   type AppState,
   type CursorPoint,
-  type GlorpBridge,
+  type BuddyBridge,
   type ProcessMetrics,
 } from '../shared/ipc';
 
@@ -13,7 +13,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
   return () => ipcRenderer.removeListener(channel, listener);
 }
 
-const bridge: GlorpBridge = {
+const bridge: BuddyBridge = {
   platform: process.platform,
   setInteractive: (interactive) => ipcRenderer.send(IPC.setInteractive, interactive),
   getAppState: () => ipcRenderer.invoke(IPC.getAppState) as Promise<AppState>,
@@ -23,4 +23,4 @@ const bridge: GlorpBridge = {
   onMetrics: (cb) => subscribe<ProcessMetrics>(IPC.metrics, cb),
 };
 
-contextBridge.exposeInMainWorld('glorp', bridge);
+contextBridge.exposeInMainWorld('buddy', bridge);

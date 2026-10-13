@@ -36,7 +36,11 @@ const SHAPE: BodyShape = {
   peak: 0,
 };
 
-/** Colour roles for this character, derived from the shared Palette shape. */
+/** Colour roles this character's renderer reads from `palette.colors`. */
+type Role =
+  'steelLight' | 'steel' | 'steelDark' | 'socket' | 'eyeRing' | 'eyeCenter' | 'blade' | 'gem';
+
+/** Full set of colours used while drawing, derived from a palette. */
 interface Kit {
   ink: string;
   steelLight: string;
@@ -54,98 +58,87 @@ interface Kit {
 }
 
 function kit(p: Palette): Kit {
+  const c = p.colors as Record<Role, string>;
   return {
     ink: p.outline,
-    steelLight: p.bodyLight,
-    steel: p.body,
-    steelDark: p.bodyShade,
-    shine: mix(p.bodyLight, '#ffffff', 0.4),
-    socket: p.belly,
-    socketRim: mix(p.belly, p.bodyShade, 0.45),
-    eye: p.irisAlt,
-    ring: p.iris,
-    accentLight: mix(p.antennaTip, '#ffffff', 0.32),
-    accent: p.antennaTip,
-    accentDark: mix(p.antennaTip, '#2a0a5a', 0.45),
-    gem: p.cheek,
+    steelLight: c.steelLight,
+    steel: c.steel,
+    steelDark: c.steelDark,
+    shine: mix(c.steelLight, '#ffffff', 0.4),
+    socket: c.socket,
+    socketRim: mix(c.socket, c.steelDark, 0.45),
+    eye: c.eyeCenter,
+    ring: c.eyeRing,
+    accentLight: mix(c.blade, '#ffffff', 0.32),
+    accent: c.blade,
+    accentDark: mix(c.blade, '#2a0a5a', 0.45),
+    gem: c.gem,
   };
 }
 
-const base = { mouth: '#1c2335', tongue: '#ff8aa2', accent: '#ffffff' } as const;
+function palette(id: string, name: string, outline: string, colors: Record<Role, string>): Palette {
+  return {
+    id,
+    name,
+    outline,
+    accent: colors.blade,
+    accent2: mix(colors.blade, '#ffffff', 0.45),
+    colors,
+  };
+}
 
-/** Palette fields: body/bodyLight/bodyShade = steel, outline = ink, belly = eye socket,
- * iris = eye ring, irisAlt = eye centre, antennaTip = horns/swords/spikes, cheek = chest gem. */
+/** Horns, swords and spikes share the blade colour, so they always match. */
 const PALETTES: Record<string, Palette> = {
-  steel: {
-    ...base,
-    id: 'steel',
-    name: 'Reference Steel',
-    body: '#6d8198',
-    bodyLight: '#8195ab',
-    bodyShade: '#55687f',
-    outline: '#1d1428',
-    belly: '#1e2537',
-    cheek: '#3f8fe0',
-    iris: '#a43fcf',
-    irisAlt: '#ddd6e3',
-    antennaTip: '#a64ccb',
-  },
-  violet: {
-    ...base,
-    id: 'violet',
-    name: 'Classic Violet',
-    body: '#6a5a9a',
-    bodyLight: '#8676b4',
-    bodyShade: '#4f427c',
-    outline: '#1a1229',
-    belly: '#160f24',
-    cheek: '#ffcf5a',
-    iris: '#ff4fc4',
-    irisAlt: '#ffe0f4',
-    antennaTip: '#e8509e',
-  },
-  arenaBlue: {
-    ...base,
-    id: 'arenaBlue',
-    name: 'Arena Blue',
-    body: '#5d7aa6',
-    bodyLight: '#7593bf',
-    bodyShade: '#45608a',
-    outline: '#101a2c',
-    belly: '#0f1726',
-    cheek: '#ffffff',
-    iris: '#2fb8f0',
-    irisAlt: '#dff6ff',
-    antennaTip: '#3aa8e8',
-  },
-  arenaRed: {
-    ...base,
-    id: 'arenaRed',
-    name: 'Arena Red',
-    body: '#727a8c',
-    bodyLight: '#8a92a4',
-    bodyShade: '#5a6173',
-    outline: '#171a24',
-    belly: '#16131a',
-    cheek: '#ffffff',
-    iris: '#e8443f',
-    irisAlt: '#ffe2de',
-    antennaTip: '#df4a44',
-  },
-  amber: {
-    ...base,
-    id: 'amber',
-    name: 'Max Level Amber',
-    body: '#5e4a82',
-    bodyLight: '#78629e',
-    bodyShade: '#473766',
-    outline: '#160e24',
-    belly: '#120b1e',
-    cheek: '#ffb53d',
-    iris: '#f0a52a',
-    irisAlt: '#fff1d2',
-    antennaTip: '#eda53a',
-  },
+  steel: palette('steel', 'Reference Steel', '#1d1428', {
+    steelLight: '#8195ab',
+    steel: '#6d8198',
+    steelDark: '#55687f',
+    socket: '#1e2537',
+    eyeRing: '#a43fcf',
+    eyeCenter: '#ddd6e3',
+    blade: '#a64ccb',
+    gem: '#3f8fe0',
+  }),
+  violet: palette('violet', 'Classic Violet', '#1a1229', {
+    steelLight: '#8676b4',
+    steel: '#6a5a9a',
+    steelDark: '#4f427c',
+    socket: '#160f24',
+    eyeRing: '#ff4fc4',
+    eyeCenter: '#ffe0f4',
+    blade: '#e8509e',
+    gem: '#ffcf5a',
+  }),
+  arenaBlue: palette('arenaBlue', 'Arena Blue', '#101a2c', {
+    steelLight: '#7593bf',
+    steel: '#5d7aa6',
+    steelDark: '#45608a',
+    socket: '#0f1726',
+    eyeRing: '#2fb8f0',
+    eyeCenter: '#dff6ff',
+    blade: '#3aa8e8',
+    gem: '#ffffff',
+  }),
+  arenaRed: palette('arenaRed', 'Arena Red', '#171a24', {
+    steelLight: '#8a92a4',
+    steel: '#727a8c',
+    steelDark: '#5a6173',
+    socket: '#16131a',
+    eyeRing: '#e8443f',
+    eyeCenter: '#ffe2de',
+    blade: '#df4a44',
+    gem: '#ffffff',
+  }),
+  amber: palette('amber', 'Max Level Amber', '#160e24', {
+    steelLight: '#78629e',
+    steel: '#5e4a82',
+    steelDark: '#473766',
+    socket: '#120b1e',
+    eyeRing: '#f0a52a',
+    eyeCenter: '#fff1d2',
+    blade: '#eda53a',
+    gem: '#ffb53d',
+  }),
 };
 
 export const PEKKA: SpeciesDef = {
@@ -157,8 +150,6 @@ export const PEKKA: SpeciesDef = {
   palettes: PALETTES,
   defaultPalette: 'steel',
   shape: SHAPE,
-  eyeStyles: [],
-  accessories: [],
   dangly: [],
   softness: 0.3,
   // The reference's resting look is stern: inner corners of the eye sockets slant down.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/random';
 import { IdleAnimator } from './idleAnimator';
 
-const host = { squash: () => {}, kickAntennae: () => {} };
+const host = { squash: () => {}, kickChains: () => {} };
 
 function run(anim: IdleAnimator, seconds: number, each?: () => void) {
   for (let i = 0; i < seconds * 60; i++) {

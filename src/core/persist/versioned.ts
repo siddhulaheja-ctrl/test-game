@@ -72,7 +72,7 @@ export function decodeEnvelope<T>(
 ): T {
   const parsed: unknown = JSON.parse(raw);
   if (!isPlainObject(parsed) || typeof parsed.version !== 'number' || !('data' in parsed)) {
-    throw new MigrationError('File is not a Glorp save envelope.');
+    throw new MigrationError('File is not a Desktop Buddy save envelope.');
   }
   const migrated = runMigrations(parsed.data, parsed.version, currentVersion, migrations);
   return mergeWithDefaults(defaults, migrated);

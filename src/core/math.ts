@@ -20,11 +20,6 @@ export const remap = (v: number, a0: number, a1: number, b0: number, b1: number)
 export const approach = (current: number, target: number, halfLife: number, dt: number): number =>
   halfLife <= 0 ? target : target + (current - target) * Math.pow(2, -dt / halfLife);
 
-export const smoothstep = (t: number): number => {
-  const x = clamp01(t);
-  return x * x * (3 - 2 * x);
-};
-
 export const easeOutBack = (t: number, overshoot = 1.70158): number => {
   const x = clamp01(t) - 1;
   return x * x * ((overshoot + 1) * x + overshoot) + 1;
@@ -39,6 +34,3 @@ export interface Vec2 {
   x: number;
   y: number;
 }
-
-export const vec = (x = 0, y = 0): Vec2 => ({ x, y });
-export const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);

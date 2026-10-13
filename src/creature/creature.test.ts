@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { Creature } from './creature';
+import { getSpecies, registerSpecies } from './species';
+
+// A minimal test-only character with one dangly chain, to exercise chain physics.
+registerSpecies({
+  ...getSpecies('pekka'),
+  id: 'test-dangly',
+  name: 'Test',
+  dangly: [
+    {
+      rootAngle: -Math.PI / 2,
+      rootInset: 0.9,
+      restAngle: -Math.PI / 2,
+      curl: 0.1,
+      droopCurl: 0.28,
+      segments: 4,
+      segLen: 0.15,
+    },
+  ],
+});
 
 const step = (c: Creature, seconds: number) => {
   for (let i = 0; i < Math.round(seconds * 60); i++) c.update(1 / 60);
@@ -38,10 +57,10 @@ describe('Creature', () => {
     expect(hs.distanceOutside(400, 50)).toBeGreaterThan(100);
   });
 
-  it('antennae lag behind fast motion then settle back to rest', () => {
-    const c = new Creature({ x: 100, y: 300 });
+  it('dangly chains lag behind fast motion then settle back to rest', () => {
+    const c = new Creature({ x: 100, y: 300, appearance: { species: 'test-dangly' } });
     c.anim.enabled = false;
-    const tip = () => ({ ...c.chains[1]!.points.at(-1)! });
+    const tip = () => ({ ...c.chains[0]!.points.at(-1)! });
     step(c, 1);
     const rest = tip();
     c.x += 40;
@@ -53,8 +72,8 @@ describe('Creature', () => {
 
   it('appearance changes are normalised', () => {
     const c = new Creature();
-    c.setAppearance({ accessories: ['beanie', 'crown'], size: 1.5 });
-    expect(c.appearance.accessories).toEqual(['crown']);
+    c.setAppearance({ palette: 'nope', size: 1.5 });
+    expect(c.appearance.palette).toBe('steel');
     expect(c.R).toBeCloseTo(46 * 1.5);
   });
 

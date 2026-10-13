@@ -7,7 +7,7 @@ This log records why each choice was made. The newest entries go at the bottom o
 | Question | Answer                                                                                                                                                                                 |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | OS       | **Windows**. The Windows `WindowProvider` is built first; macOS and Linux get stubs.                                                                                                   |
-| Name     | **Glorp**                                                                                                                                                                              |
+| Name     | First character was **Glorp** (a jelly blob, since removed). The app is now **Desktop Buddy**, with characters you pick from.                                                          |
 | Vibe     | **Cute, with thorough and detailed visuals.** The behaviour is a bit weird, but it turns plain and serious when it gives a real suggestion (reminders, health nudges, focus coaching). |
 | AI       | No Anthropic key right now. A Google key may come later. The LLM layer sits behind a provider interface (`LlmProvider`), and the offline line bank is the default.                     |
 
@@ -20,7 +20,7 @@ This log records why each choice was made. The newest entries go at the bottom o
 │ app lifecycle · tray · settings store (JSON) · IPC                   │
 │ platform/ providers (WindowProvider, cursor, metrics, later senses)  │
 └───────────────▲───────────────────────────────────┬──────────────────┘
-                │ typed IPC (src/shared/ipc.ts)     │ preload bridge (window.glorp)
+                │ typed IPC (src/shared/ipc.ts)     │ preload bridge (window.buddy)
 ┌───────────────┴───────────────────────────────────▼──────────────────┐
 │ Overlay renderer: the "brain" plus the canvas                        │
 │ core/ loop + event bus · creature/ body + drawing · behaviors/       │
@@ -31,7 +31,7 @@ This log records why each choice was made. The newest entries go at the bottom o
 - **The simulation runs in the overlay renderer.** It needs the 60 fps loop and the canvas. Main stays thin: it owns anything that needs Node or OS access and sends results to the renderer as events.
 - **Pure modules** (`core/`, `creature/`, `behaviors/`, `life/`, `ai/`, the sense _interpreters_) import nothing from Electron or Node. Vitest tests them in plain Node. Drawing functions take a `CanvasRenderingContext2D` and do nothing else.
 - **`src/shared/`** holds the IPC channel names and payload types used by both sides, so every message is typed at both ends.
-- **Security:** `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, and a strict CSP. The preload exposes a small typed `window.glorp` API.
+- **Security:** `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, and a strict CSP. The preload exposes a small typed `window.buddy` API.
 
 ### Directory map
 
@@ -41,7 +41,7 @@ This log records why each choice was made. The newest entries go at the bottom o
 | `src/preload/`   | The context bridge.                                                                         |
 | `src/shared/`    | IPC contracts and shared types.                                                             |
 | `src/core/`      | Loop, event bus, seeded RNG, math, springs and verlet, persistence helpers.                 |
-| `src/creature/`  | Appearance model, face and expression math, soft body, idle animator, particles, rendering. |
+| `src/creature/`  | Shared engine (physics, expressions, idle animator, particles) and `species/` (characters). |
 | `src/behaviors/` | Behaviour state machine and behaviour modules (Stage 2+).                                   |
 | `src/senses/`    | Sense provider interfaces and the code that turns raw readings into events (Stage 3+).      |
 | `src/life/`      | Needs, mood, personality, memory (Stage 4+).                                                |
@@ -84,14 +84,20 @@ This log records why each choice was made. The newest entries go at the bottom o
 ## Stage 1: the body
 
 - **Canvas 2D, not PixiJS.** One creature with a few dozen paths and a small particle pool is cheap in Canvas 2D. It also avoids a WebGL context and keeps idle memory and CPU low. PixiJS would mostly help with batching many sprites, which we don't need.
-- **The body is a soft ring of 20 radial springs** with neighbour coupling, drawn as a closed Catmull-Rom spline. Pokes and landings push on the ring, so the jelly wobble is local, not just a global scale.
 - **Squash and stretch** is a spring on vertical scale. Horizontal scale is derived to roughly keep the volume constant. Everything scales about the feet so the creature stays planted.
-- **Antennae** are verlet chains in world space, pulled toward a rest pose. They lag behind body motion and squash naturally. The weird-but-cute detail: the left antenna droops slightly more than the right.
-- **Expressions** are points in one parameter space (`FaceParams`): eye openness, squint, lid tilt, brows, mouth curve, openness, width and wobble, blush, head tilt, arm raise, antenna droop. Any mix of expressions is a weighted average, so blending is exact. Short animations (blink, yawn) are layered on top of the blended face.
-- **Eye styles** decide how the eyes are drawn, not the expression parameters. Every style responds to the same parameters.
-- **Accessories** are drawn in the body's local frame, so they follow squash and stretch. Some have their own springs (the pom-pom, the scarf tail).
-- **Face parallax and lag:** the eyes and mouth shift slightly toward where Glorp looks, and lag behind sudden body moves. This small 3D cue is a big part of what makes it feel alive.
-- **Brows fade in with emotion.** At rest the face is just eyes, mouth and blush. Brows appear as the face gets more expressive, so the resting look stays soft and simple.
-- **Weird-but-cute details** (from the owner's brief): a single tiny fang when the mouth opens, one antenna floppier than the other, optional mismatched eyes, freckles, and a tongue-out "blep" fidget.
+- **Expressions** are points in one parameter space (`FaceParams`): eye openness, squint, lid tilt, brows, mouth curve, openness, width and wobble, blush, head tilt, arm raise, droop, sparkle. Any mix of expressions is a weighted average, so blending is exact. Short animations (blink, yawn) are layered on top of the blended face. Each character decides how to draw those numbers.
 - **Screenshot tests use the lab's `?test=1` mode.** Idle animations are off, the seed is fixed, the stage is a fixed size, and time only advances when the test asks. Baselines are stored per platform, since canvas antialiasing differs slightly between operating systems.
-- **Adaptive frame rate:** `Creature.activity()` sums spring velocity, ring energy, antenna motion and particles. Slow breathing sway is left out on purpose, because it looks fine at the idle frame rate.
+- **Adaptive frame rate:** `Creature.activity()` sums spring velocity, ring energy, dangly-chain motion and particles. Slow breathing sway is left out on purpose, because it looks fine at the idle frame rate.
+
+## Characters (species)
+
+- **One engine, many characters.** Physics, expressions, idle animation, particles and (later) behaviours are shared. A character (`SpeciesDef`) supplies its hit/shadow envelope, optional dangly chains (verlet ropes for antennae, tails and the like), palettes, a stiffness value, an optional resting face bias, an optional per-frame `update` hook, and its `draw` function.
+- **Palettes are generic.** Every palette has `outline`, `accent` and `accent2` (particles use these) plus a `colors` record of roles that only that character's renderer reads. Every palette of a character must define the same roles (a unit test checks this).
+- **Glorp was removed** at the owner's request after PEKKA was added. The app was renamed **Desktop Buddy** so its name doesn't depend on one character. Glorp's code (blob body, face styles, accessories) is in git history if any of it is useful for a future character.
+
+### P.E.K.K.A (fan character)
+
+- **Replicates the owner's reference image.** Shapes are authored in "reference space": pixel coordinates measured on a 3x enlargement of that image (centre x 392, ground y 495). The renderer maps that space onto the pose, so squash, tilt, hops and expressions still apply. This made matching the proportions exact instead of approximate.
+- **Swords, horns and spikes share one `blade` colour** so they always match the armour's accent.
+- **Stern resting look** via `faceBias: { lidTilt: 0.35 }`; the eye sockets' top edge follows `lidTilt`, so the same expressions work for her.
+- **The Supercell logo on the reference chest is replaced by a plain gem plaque.** P.E.K.K.A is © Supercell; this is non-commercial fan art (Supercell's Fan Content Policy).

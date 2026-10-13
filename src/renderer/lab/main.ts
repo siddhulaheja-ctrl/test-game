@@ -1,13 +1,5 @@
 import { Loop } from '../../core/loop';
-import {
-  ACCESSORIES,
-  BODY_SHAPES,
-  EYE_STYLES,
-  normalizeAppearance,
-  withAccessory,
-  type AccessoryId,
-  type Appearance,
-} from '../../creature/appearance';
+import { normalizeAppearance, type Appearance } from '../../creature/appearance';
 import { Creature } from '../../creature/creature';
 import { listSpecies } from '../../creature/species';
 import {
@@ -39,7 +31,7 @@ interface LabState {
 
 const params = new URLSearchParams(location.search);
 const testMode = params.has('test');
-const STORAGE_KEY = 'glorp.lab.v1';
+const STORAGE_KEY = 'buddy.lab.v1';
 
 const defaults: LabState = {
   appearance: normalizeAppearance({}),
@@ -161,48 +153,9 @@ function buildControls(): void {
       state.appearance.palette,
       (v) => setAppearance({ palette: v }),
     );
-    if (sp.eyeStyles.length > 1) {
-      select(
-        apBody,
-        'Eyes',
-        sp.eyeStyles.map((id) => ({ value: id, label: EYE_STYLES[id].name })),
-        state.appearance.eyes,
-        (v) => setAppearance({ eyes: v }),
-      );
-    }
-    if (!sp.shape && sp.bodyShapes && sp.bodyShapes.length > 1) {
-      select(
-        apBody,
-        'Body',
-        sp.bodyShapes.map((id) => ({ value: id, label: BODY_SHAPES[id].name })),
-        state.appearance.body,
-        (v) => setAppearance({ body: v }),
-      );
-    }
     slider(apBody, 'Size', { min: 0.6, max: 2, step: 0.05, value: state.appearance.size }, (v) =>
       setAppearance({ size: v }),
     );
-    if (sp.accessories.length === 0) return;
-    apBody.append(el('div', { className: 'hint', textContent: 'Accessories (one per slot)' }));
-    const checks = el('div', { className: 'checks' });
-    apBody.append(checks);
-    const accBoxes = new Map<AccessoryId, HTMLInputElement>();
-    for (const id of sp.accessories) {
-      const box = checkbox(
-        checks,
-        ACCESSORIES[id].name,
-        state.appearance.accessories.includes(id),
-        (on) => {
-          const list = on
-            ? withAccessory(state.appearance.accessories, id)
-            : state.appearance.accessories.filter((a) => a !== id);
-          setAppearance({ accessories: list });
-          for (const [other, bx] of accBoxes)
-            bx.checked = state.appearance.accessories.includes(other);
-        },
-      );
-      accBoxes.set(id, box);
-    }
   }
   buildAppearance();
 

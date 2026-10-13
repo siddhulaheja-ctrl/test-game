@@ -48,8 +48,8 @@ export const IPC = {
   patchAppState: 'app:patch-state',
 } as const;
 
-/** API exposed on `window.glorp` by the preload script. */
-export interface GlorpBridge {
+/** API exposed on `window.buddy` by the preload script. */
+export interface BuddyBridge {
   readonly platform: string;
   setInteractive(interactive: boolean): void;
   getAppState(): Promise<AppState>;

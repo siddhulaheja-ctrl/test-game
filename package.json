@@ -1,11 +1,11 @@
 {
-  "name": "glorp",
-  "productName": "Glorp",
+  "name": "desktop-buddy",
+  "productName": "Desktop Buddy",
   "version": "0.1.0",
-  "description": "Glorp: a living desktop companion drawn entirely in code.",
+  "description": "Desktop Buddy: living desktop companions drawn entirely in code.",
   "private": true,
   "main": "dist/main/index.cjs",
-  "author": "Glorp contributors",
+  "author": "Desktop Buddy contributors",
   "license": "MIT",
   "scripts": {
     "dev": "node scripts/dev.mjs",

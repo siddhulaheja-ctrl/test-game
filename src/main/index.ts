@@ -4,15 +4,15 @@ import { DEFAULT_APP_STATE, IPC, type AppState, type ProcessMetrics } from '../s
 import { JsonStore } from './jsonStore';
 import { OverlayWindow } from './overlayWindow';
 import { pageLocation, preloadPath } from './paths';
-import { GlorpTray } from './tray';
+import { BuddyTray } from './tray';
 import { installTestHooks } from './testHooks';
 
 const SETTINGS_VERSION = 1;
 const CURSOR_POLL_MS = 33;
 const METRICS_POLL_MS = 1000;
 
-if (process.env.GLORP_USER_DATA) app.setPath('userData', process.env.GLORP_USER_DATA);
-app.setAppUserModelId('com.glorp.desktop');
+if (process.env.BUDDY_USER_DATA) app.setPath('userData', process.env.BUDDY_USER_DATA);
+app.setAppUserModelId('com.desktopbuddy.app');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -59,7 +59,7 @@ function start(): void {
     labWindow = new BrowserWindow({
       width: 1280,
       height: 840,
-      title: 'Glorp: Creature Lab',
+      title: 'Desktop Buddy: Creature Lab',
       backgroundColor: '#1d1b26',
       autoHideMenuBar: true,
       webPreferences: { preload: preloadPath, contextIsolation: true, sandbox: true },
@@ -70,7 +70,7 @@ function start(): void {
     labWindow.on('closed', () => (labWindow = null));
   };
 
-  const tray = new GlorpTray({
+  const tray = new BuddyTray({
     toggleVisible: () => setState({ visible: !state.visible }),
     setQuietMode: (on) => setState({ quietMode: on }),
     setDebugOverlay: (on) => setState({ debugOverlay: on }),
@@ -148,7 +148,7 @@ function start(): void {
   // The pet lives in the tray: closing the lab must not quit the app.
   app.on('window-all-closed', () => {});
 
-  if (process.env.GLORP_E2E === '1') {
+  if (process.env.BUDDY_E2E === '1') {
     installTestHooks({ overlay, tray, getState: () => state, setState, openLab });
   }
 }

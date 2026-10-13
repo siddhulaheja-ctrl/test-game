@@ -1,5 +1,5 @@
 /**
- * Glorp's icon, rasterised in code (no image assets). Shapes are defined in unit space [0, 1]
+ * The app icon (PEKKA's helmet), rasterised in code (no image assets). Shapes are defined in unit space [0, 1]
  * and painted back-to-front with 4x4 supersampling for smooth edges.
  */
 
@@ -29,35 +29,45 @@ const capsule = (
   },
 });
 
-const OUTLINE: RGBA = [46, 84, 74, 255];
-const BODY: RGBA = [140, 224, 190, 255];
-const BODY_LIGHT: RGBA = [188, 244, 218, 255];
-const TIP: RGBA = [255, 168, 196, 255];
-const EYE: RGBA = [34, 40, 52, 255];
-const WHITE: RGBA = [255, 255, 255, 255];
-const CHEEK: RGBA = [255, 150, 170, 200];
+const rect = (x0: number, y0: number, x1: number, y1: number, color: RGBA): Shape => ({
+  color,
+  inside: (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1,
+});
 
+const INK: RGBA = [29, 20, 40, 255];
+const STEEL: RGBA = [109, 129, 152, 255];
+const STEEL_LIGHT: RGBA = [129, 149, 171, 255];
+const SOCKET: RGBA = [30, 37, 55, 255];
+const HORN: RGBA = [166, 76, 203, 255];
+const HORN_LIGHT: RGBA = [201, 127, 224, 255];
+const RING: RGBA = [164, 63, 207, 255];
+const EYE: RGBA = [221, 214, 227, 255];
+
+/** PEKKA's helmet: crescent horns, rounded dome, dark eye sockets with ringed eyes. */
 const SHAPES: Shape[] = [
-  // antennae (stalk outline, then fill), with blush-pink bobbles
-  capsule(0.4, 0.32, 0.3, 0.12, 0.045, OUTLINE),
-  capsule(0.6, 0.32, 0.72, 0.14, 0.045, OUTLINE),
-  ellipse(0.29, 0.11, 0.085, 0.085, OUTLINE),
-  ellipse(0.73, 0.13, 0.085, 0.085, OUTLINE),
-  ellipse(0.29, 0.11, 0.055, 0.055, TIP),
-  ellipse(0.73, 0.13, 0.055, 0.055, TIP),
-  // body
-  ellipse(0.5, 0.62, 0.46, 0.37, OUTLINE),
-  ellipse(0.5, 0.62, 0.405, 0.315, BODY),
-  ellipse(0.43, 0.52, 0.22, 0.12, BODY_LIGHT),
-  // face
-  ellipse(0.3, 0.7, 0.07, 0.04, CHEEK),
-  ellipse(0.7, 0.7, 0.07, 0.04, CHEEK),
-  ellipse(0.39, 0.6, 0.065, 0.09, EYE),
-  ellipse(0.61, 0.6, 0.065, 0.09, EYE),
-  ellipse(0.41, 0.565, 0.025, 0.025, WHITE),
-  ellipse(0.63, 0.565, 0.025, 0.025, WHITE),
-  capsule(0.46, 0.73, 0.5, 0.75, 0.018, OUTLINE),
-  capsule(0.5, 0.75, 0.54, 0.73, 0.018, OUTLINE),
+  // Horns (ink, then colour): out from the sides, then up.
+  capsule(0.3, 0.46, 0.13, 0.36, 0.075, INK),
+  capsule(0.13, 0.36, 0.17, 0.06, 0.06, INK),
+  capsule(0.7, 0.46, 0.87, 0.36, 0.075, INK),
+  capsule(0.87, 0.36, 0.83, 0.06, 0.06, INK),
+  capsule(0.3, 0.46, 0.13, 0.36, 0.045, HORN),
+  capsule(0.13, 0.36, 0.17, 0.08, 0.032, HORN_LIGHT),
+  capsule(0.7, 0.46, 0.87, 0.36, 0.045, HORN),
+  capsule(0.87, 0.36, 0.83, 0.08, 0.032, HORN_LIGHT),
+  // Helmet: dome plus straight sides, outlined.
+  ellipse(0.5, 0.42, 0.3, 0.3, INK),
+  rect(0.2, 0.42, 0.8, 0.96, INK),
+  ellipse(0.5, 0.42, 0.25, 0.25, STEEL),
+  rect(0.25, 0.42, 0.75, 0.91, STEEL),
+  rect(0.25, 0.3, 0.38, 0.91, STEEL_LIGHT),
+  // Eye sockets, ringed eyes, nose plate.
+  ellipse(0.38, 0.55, 0.1, 0.075, SOCKET),
+  ellipse(0.62, 0.55, 0.1, 0.075, SOCKET),
+  ellipse(0.39, 0.55, 0.05, 0.05, RING),
+  ellipse(0.61, 0.55, 0.05, 0.05, RING),
+  ellipse(0.39, 0.55, 0.028, 0.028, EYE),
+  ellipse(0.61, 0.55, 0.028, 0.028, EYE),
+  rect(0.475, 0.62, 0.525, 0.8, INK),
 ];
 
 /** Render the icon to straight RGBA pixels. */

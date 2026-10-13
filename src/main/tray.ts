@@ -28,11 +28,11 @@ export function trayMenuTemplate(
   actions: TrayActions,
 ): MenuItemConstructorOptions[] {
   return [
-    { id: 'title', label: 'Glorp', enabled: false },
+    { id: 'title', label: 'Desktop Buddy', enabled: false },
     { type: 'separator' },
     {
       id: 'toggle-visible',
-      label: state.visible ? 'Hide Glorp' : 'Show Glorp',
+      label: state.visible ? 'Hide Buddy' : 'Show Buddy',
       click: () => actions.toggleVisible(),
     },
     {
@@ -52,17 +52,17 @@ export function trayMenuTemplate(
     },
     { id: 'open-lab', label: 'Creature Lab…', click: () => actions.openLab() },
     { type: 'separator' },
-    { id: 'quit', label: 'Quit Glorp', click: () => actions.quit() },
+    { id: 'quit', label: 'Quit Desktop Buddy', click: () => actions.quit() },
   ];
 }
 
-export class GlorpTray {
+export class BuddyTray {
   readonly tray: Tray;
   private menu: Menu | null = null;
 
   constructor(private actions: TrayActions) {
     this.tray = new Tray(createTrayImage());
-    this.tray.setToolTip('Glorp');
+    this.tray.setToolTip('Desktop Buddy');
     // Windows convention: left-click toggles, right-click opens the menu.
     this.tray.on('click', () => actions.toggleVisible());
   }
@@ -70,7 +70,7 @@ export class GlorpTray {
   update(state: AppState): void {
     this.menu = Menu.buildFromTemplate(trayMenuTemplate(state, this.actions));
     this.tray.setContextMenu(this.menu);
-    this.tray.setToolTip(state.quietMode ? 'Glorp (quiet)' : 'Glorp');
+    this.tray.setToolTip(state.quietMode ? 'Desktop Buddy (quiet)' : 'Desktop Buddy');
   }
 
   getMenu(): Menu | null {

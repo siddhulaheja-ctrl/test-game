@@ -24,11 +24,6 @@ export function restPoint(shape: BodyShape, theta: number): Vec2 {
   return { x, y };
 }
 
-/** Height of the body below its centre (to the feet line), in units of body radius. */
-export const bodyBottom = (shape: BodyShape): number => shape.ryBottom;
-/** Height of the body above its centre, in units of body radius. */
-export const bodyTop = (shape: BodyShape): number => restPoint(shape, -Math.PI / 2).y * -1;
-
 /**
  * A ring of radial springs around the outline. Each point can be pushed in or out; neighbours pull
  * on each other so dents spread and wobble like jelly before settling.
