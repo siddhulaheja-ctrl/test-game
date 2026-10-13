@@ -10,7 +10,7 @@ export default defineConfig({
   timeout: 60_000,
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   reporter: [['list']],
-  snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
+  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{projectName}/{arg}{ext}',
   webServer: {
     command: 'npx vite build && npx vite preview',
     url: 'http://localhost:4173/lab/index.html',

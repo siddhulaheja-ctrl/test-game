@@ -90,3 +90,8 @@ This log records why each choice was made. The newest entries go at the bottom o
 - **Expressions** are points in one parameter space (`FaceParams`): eye openness, squint, lid tilt, brows, mouth curve, openness, width and wobble, blush, head tilt, arm raise, antenna droop. Any mix of expressions is a weighted average, so blending is exact. Short animations (blink, yawn) are layered on top of the blended face.
 - **Eye styles** decide how the eyes are drawn, not the expression parameters. Every style responds to the same parameters.
 - **Accessories** are drawn in the body's local frame, so they follow squash and stretch. Some have their own springs (the pom-pom, the scarf tail).
+- **Face parallax and lag:** the eyes and mouth shift slightly toward where Glorp looks, and lag behind sudden body moves. This small 3D cue is a big part of what makes it feel alive.
+- **Brows fade in with emotion.** At rest the face is just eyes, mouth and blush. Brows appear as the face gets more expressive, so the resting look stays soft and simple.
+- **Weird-but-cute details** (from the owner's brief): a single tiny fang when the mouth opens, one antenna floppier than the other, optional mismatched eyes, freckles, and a tongue-out "blep" fidget.
+- **Screenshot tests use the lab's `?test=1` mode.** Idle animations are off, the seed is fixed, the stage is a fixed size, and time only advances when the test asks. Baselines are stored per platform, since canvas antialiasing differs slightly between operating systems.
+- **Adaptive frame rate:** `Creature.activity()` sums spring velocity, ring energy, antenna motion and particles. Slow breathing sway is left out on purpose, because it looks fine at the idle frame rate.

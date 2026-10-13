@@ -3,10 +3,221 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://localhost:5173"
+    />
     <title>Glorp: Creature Lab</title>
+    <style>
+      :root {
+        --bg: #17151f;
+        --panel: #211e2c;
+        --panel-2: #2a2638;
+        --line: #393349;
+        --text: #ece8f6;
+        --muted: #9d96b3;
+        --accent: #8fe3c0;
+        --accent-ink: #12372b;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          13px/1.4 'Segoe UI',
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      body {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        grid-template-rows: 1fr auto;
+        height: 100vh;
+      }
+      #sidebar {
+        grid-row: 1 / span 2;
+        overflow-y: auto;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        padding: 14px 14px 40px;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 2px;
+        letter-spacing: 0.2px;
+      }
+      .subtitle {
+        color: var(--muted);
+        margin: 0 0 12px;
+        font-size: 12px;
+      }
+      details {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin: 0 0 10px;
+        background: var(--panel-2);
+      }
+      summary {
+        cursor: pointer;
+        padding: 8px 12px;
+        font-weight: 600;
+        user-select: none;
+      }
+      .section {
+        padding: 2px 12px 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0;
+      }
+      .row label {
+        flex: 0 0 96px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .row input[type='range'] {
+        flex: 1;
+        accent-color: var(--accent);
+      }
+      .row output {
+        flex: 0 0 38px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      select {
+        flex: 1;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px 6px;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0;
+      }
+      button {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 5px 9px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      button.active {
+        background: var(--accent);
+        color: var(--accent-ink);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .checks {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 10px;
+        margin: 6px 0;
+      }
+      .checks label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 11px;
+        margin: 4px 0;
+      }
+      #stage-wrap {
+        position: relative;
+        overflow: hidden;
+      }
+      #stage {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+      #stage-wrap.bg-checker {
+        background-color: #e9e6ef;
+        background-image:
+          linear-gradient(45deg, #d6d2df 25%, transparent 25%),
+          linear-gradient(-45deg, #d6d2df 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #d6d2df 75%),
+          linear-gradient(-45deg, transparent 75%, #d6d2df 75%);
+        background-size: 24px 24px;
+        background-position:
+          0 0,
+          0 12px,
+          12px -12px,
+          -12px 0;
+      }
+      #stage-wrap.bg-light {
+        background: #f6f4fa;
+      }
+      #stage-wrap.bg-dark {
+        background: #1b1d27;
+      }
+      #stage-wrap.bg-desktop {
+        background: linear-gradient(160deg, #3a6ea5 0%, #6b8fc9 45%, #c9a6d8 100%);
+      }
+      #status {
+        padding: 6px 12px;
+        border-top: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--muted);
+        font:
+          11px ui-monospace,
+          Consolas,
+          monospace;
+        display: flex;
+        gap: 18px;
+      }
+      /* Deterministic layout for screenshot tests. */
+      body.test-mode {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+      }
+      body.test-mode #sidebar,
+      body.test-mode #status {
+        display: none;
+      }
+      body.test-mode #stage-wrap {
+        width: 360px;
+        height: 300px;
+      }
+    </style>
   </head>
   <body>
-    <p>The creature lab arrives in Stage 1.</p>
+    <aside id="sidebar">
+      <h1>Creature Lab</h1>
+      <p class="subtitle">
+        Click Glorp to poke it. Shift-click an expression for a short reaction. Settings are kept
+        between reloads.
+      </p>
+      <div id="controls"></div>
+    </aside>
+    <main id="stage-wrap" class="bg-checker"><canvas id="stage"></canvas></main>
+    <footer id="status"></footer>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

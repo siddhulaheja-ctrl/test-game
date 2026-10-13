@@ -43,12 +43,11 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            {
-              group: ['electron', 'node:*', 'fs', 'path', 'os'],
-              message: 'Pure modules cannot use Electron or Node APIs.',
-            },
-          ],
+          paths: ['electron', 'fs', 'path', 'os', 'child_process'].map((name) => ({
+            name,
+            message: 'Pure modules cannot use Electron or Node APIs.',
+          })),
+          patterns: [{ group: ['node:*'], message: 'Pure modules cannot use Node APIs.' }],
         },
       ],
     },

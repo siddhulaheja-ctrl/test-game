@@ -2,6 +2,10 @@
 
 A living desktop companion. Glorp is a small jelly creature drawn entirely in code. It sits on top of your desktop in a transparent window, and clicks pass straight through everywhere except on Glorp itself.
 
+![Glorp's nine expressions](docs/images/expressions.png)
+
+![Palettes, eye styles, body shapes and accessories](docs/images/looks.png)
+
 > Status: early development. See [`PROGRESS.md`](PROGRESS.md) for what works today and [`DECISIONS.md`](DECISIONS.md) for why things are built the way they are.
 
 ## Requirements
@@ -26,7 +30,7 @@ Glorp appears near the bottom-right of your primary screen, with an icon in the 
 | Creature Lab…     | Opens the lab, with sliders and buttons for every expression and animation. |
 | Quit Glorp        | Exits.                                                                      |
 
-To work on visuals in a plain browser without Electron:
+The **creature lab** has buttons and sliders for every expression, animation, particle, palette, eye style, body shape and accessory. Click Glorp there to poke it. To work on visuals in a plain browser without Electron:
 
 ```bash
 npm run lab      # opens http://localhost:5173/lab/index.html

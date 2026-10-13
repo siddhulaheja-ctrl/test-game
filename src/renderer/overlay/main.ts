@@ -1,7 +1,9 @@
 import { Loop } from '../../core/loop';
 import { DEFAULT_APP_STATE, type AppState, type CursorPoint } from '../../shared/ipc';
 import { DebugOverlay } from '../../ui/debugOverlay';
-import { InteractivityTracker, ellipseHit } from '../../ui/interactivity';
+import { InteractivityTracker } from '../../ui/interactivity';
+import { Creature } from '../../creature/creature';
+import { drawCreature } from '../../creature/render/drawCreature';
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -23,46 +25,25 @@ function resize(): void {
 resize();
 window.addEventListener('resize', resize);
 
-// --- Stage 0 placeholder creature ---------------------------------------------------------------
-const pet = { x: 0, y: 0, r: 44, t: 0, squash: 0 };
-const placePet = () => {
-  pet.x = width - 140;
-  pet.y = height - 8;
+// --- Creature ---------------------------------------------------------------------------------
+const creature = new Creature({ seed: (Date.now() & 0xffff) + 1 });
+const placeCreature = () => {
+  creature.x = width - 140;
+  creature.y = height - 4;
 };
-placePet();
-window.addEventListener('resize', placePet);
+placeCreature();
+creature.settle();
+window.addEventListener('resize', placeCreature);
 
 function update(dt: number): void {
-  pet.t += dt;
-  pet.squash *= Math.pow(0.02, dt);
-  loop.markActive();
-}
-
-function drawPlaceholder(): void {
-  const breathe = Math.sin(pet.t * 2.2) * 0.03 + pet.squash;
-  const rx = pet.r * (1 + breathe * 0.6);
-  const ry = pet.r * 0.86 * (1 - breathe);
-  const cy = pet.y - ry;
-  ctx.globalAlpha = appState.quietMode ? 0.45 : 1;
-  ctx.beginPath();
-  ctx.ellipse(pet.x, cy, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#8ce0be';
-  ctx.fill();
-  ctx.lineWidth = 3.5;
-  ctx.strokeStyle = '#2e544a';
-  ctx.stroke();
-  ctx.fillStyle = '#222834';
-  for (const dx of [-14, 14]) {
-    ctx.beginPath();
-    ctx.ellipse(pet.x + dx, cy - 4, 5, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
+  creature.update(dt);
+  // Keep full frame rate while anything visible is moving; drop to idle fps otherwise.
+  if (creature.activity() > 0.05) loop.markActive();
 }
 
 function render(): void {
   ctx.clearRect(0, 0, width, height);
-  drawPlaceholder();
+  drawCreature(ctx, creature);
   debug.render(loop.fps, loop.isIdle);
 }
 
@@ -71,8 +52,7 @@ const debug = new DebugOverlay(document.body);
 
 // --- Click-through ------------------------------------------------------------------------------
 const interactivity = new InteractivityTracker((on) => bridge?.setInteractive(on));
-const petHitShape = () => ellipseHit(pet.x, pet.y - pet.r * 0.86, pet.r, pet.r * 0.86);
-const refreshInteractivity = () => interactivity.update(cursor, petHitShape());
+const refreshInteractivity = () => interactivity.update(cursor, creature.hitShape());
 
 // Set by the e2e test hook so the real cursor can't race the simulated one.
 let simulatedCursor = false;
@@ -86,14 +66,19 @@ bridge?.onCursor((p) => {
   cursor = p;
   refreshInteractivity();
 });
-window.addEventListener('mousedown', () => {
-  if (interactivity.isInteractive) pet.squash = 0.18;
+window.addEventListener('mousedown', (e) => {
+  if (!interactivity.isInteractive) return;
+  creature.poke(e.clientX, e.clientY);
+  creature.emit('sparkle', 3);
 });
 
 // --- App state ----------------------------------------------------------------------------------
 function applyAppState(s: AppState): void {
   appState = s;
   debug.visible = s.debugOverlay;
+  creature.alpha = s.quietMode ? 0.55 : 1;
+  creature.anim.calm = s.quietMode;
+  creature.particles.enabled = !s.quietMode;
   if (s.visible) loop.start();
   else {
     loop.pause();
@@ -111,6 +96,10 @@ void (bridge ? bridge.getAppState() : Promise.resolve(appState)).then(applyAppSt
     cursor = { x, y };
     refreshInteractivity();
   },
-  petCenter: () => ({ x: pet.x, y: pet.y - pet.r * 0.86 }),
+  petCenter: () => {
+    const p = creature.getPose();
+    return { x: p.feet.x, y: p.feet.y + p.center.y * p.sy };
+  },
+  creature,
   isInteractive: () => interactivity.isInteractive,
 };
