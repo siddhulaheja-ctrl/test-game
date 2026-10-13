@@ -27,14 +27,17 @@ export function drawShadow(
   pose: CreaturePose,
 ): void {
   const R = pose.R;
-  const lift = pose.lift + pose.hover;
+  const lift = Math.max(0, pose.groundY - pose.feet.y);
+  // No shadow while clinging to a wall; it fades out the higher the pet is.
+  const fade = (1 - pose.motion.climb) * (1 - Math.min(1, Math.max(0, lift - R * 4) / (R * 6)));
+  if (fade <= 0) return;
   const shrink = 1 - Math.min(0.55, lift / (R * 6));
   const rx = creature.shape.rx * R * 0.95 * shrink * (creature.species.shadowScale ?? 1);
   const ry = R * 0.13 * shrink;
   const x = pose.feet.x;
   const y = pose.groundY - R * 0.01;
   const g = ctx.createRadialGradient(x, y, 0, x, y, rx);
-  g.addColorStop(0, `rgba(20, 24, 40, ${(0.24 * shrink).toFixed(3)})`);
+  g.addColorStop(0, `rgba(20, 24, 40, ${(0.24 * shrink * fade).toFixed(3)})`);
   g.addColorStop(1, 'rgba(20, 24, 40, 0)');
   ctx.save();
   ctx.translate(x, y);

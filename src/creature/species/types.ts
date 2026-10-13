@@ -30,6 +30,20 @@ export interface DanglyDef {
   gravity?: number;
 }
 
+/** How a character gets around (px and px/s at size 1). */
+export interface Movement {
+  walkSpeed: number;
+  runSpeed: number;
+  /** Highest a jump can climb. */
+  jumpUp: number;
+  /** Widest gap a jump can cross. */
+  jumpAcross: number;
+  canClimb: boolean;
+  climbSpeed: number;
+  /** Steps per second at walking speed. */
+  stepHz: number;
+}
+
 /**
  * A playable character. Physics, expressions, idle animation and behaviours are shared by every
  * species; a species supplies its envelope, any dangly bits, its palettes and how it is drawn.
@@ -52,6 +66,8 @@ export interface SpeciesDef {
   hover?: number;
   /** Ground shadow width multiplier. */
   shadowScale?: number;
+  /** How it gets around; defaults in `behaviors/` fill anything missing. */
+  movement?: Partial<Movement>;
   /** Added to the blended face every frame (a character's resting look, e.g. a stern slant). */
   faceBias?: Partial<FaceParams>;
   /** Per-species simulation extras (flicker, blinking lights, spawning particles). */

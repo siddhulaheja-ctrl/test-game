@@ -1,6 +1,6 @@
 import { Loop } from '../../core/loop';
 import { normalizeAppearance, type Appearance } from '../../creature/appearance';
-import { Creature } from '../../creature/creature';
+import { Creature, STILL, type Motion } from '../../creature/creature';
 import { listSpecies } from '../../creature/species';
 import {
   EXPRESSION_NAMES,
@@ -350,8 +350,11 @@ const api = {
     weights?: ExpressionWeights;
     face?: Partial<FaceParams>;
     look?: { x: number; y: number };
+    /** Movement pose (walking, climbing, carried, asleep…). */
+    motion?: Partial<Motion>;
   }): void {
     if (opts.appearance) setAppearance(opts.appearance);
+    creature.motion = { ...STILL, ...opts.motion };
     creature.setMood(opts.weights ?? { [opts.expression ?? 'neutral']: 1 });
     creature.manualFace = opts.face ?? null;
     creature.reset();

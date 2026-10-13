@@ -152,6 +152,16 @@ export const PEKKA: SpeciesDef = {
   shape: SHAPE,
   dangly: [],
   softness: 0.3,
+  // Heavy armour: slow, deliberate steps and short jumps, but she can still haul herself up.
+  movement: {
+    walkSpeed: 45,
+    runSpeed: 140,
+    jumpUp: 140,
+    jumpAcross: 130,
+    canClimb: true,
+    climbSpeed: 42,
+    stepHz: 1.7,
+  },
   // The reference's resting look is stern: inner corners of the eye sockets slant down.
   faceBias: { lidTilt: 0.35 },
   shadowScale: 0.75,
@@ -168,7 +178,7 @@ export const PEKKA: SpeciesDef = {
       drawHorns(ctx, k);
       drawShoulderPlates(ctx, k);
       drawHelmet(ctx, pose, k);
-      drawLowerBody(ctx, k);
+      drawLowerBody(ctx, pose, k);
       drawChest(ctx, k);
       drawArms(ctx, pose, k);
     });
@@ -225,7 +235,9 @@ function drawSwords(ctx: CanvasRenderingContext2D, pose: CreaturePose, k: Kit): 
     const gx = mx(214, side);
     const gy = 304 - f.armRaise * 22 + f.droop * 8;
     // Droop (sad, sleepy) lets the blades sag outward; arms up lifts them toward vertical.
-    const raise = f.armRaise * 0.42 - f.droop * 0.32 + (side > 0 ? -wave : 0);
+    // Walking swings the blades a little, opposite to the feet.
+    const swing = Math.sin(pose.walkPhase) * 0.12 * Math.min(1, pose.motion.walk) * side;
+    const raise = f.armRaise * 0.42 - f.droop * 0.32 + (side > 0 ? -wave : 0) + swing;
     const angle = side < 0 ? refAngle + raise : Math.PI - refAngle - raise;
     const len = 270;
     const w = 23;
@@ -525,10 +537,37 @@ function drawEye(
 
 // --- Lower body -------------------------------------------------------------------------------
 
-/** Flat disc feet set well apart, a wide hip block and a centre plate. */
-function drawLowerBody(ctx: CanvasRenderingContext2D, k: Kit): void {
+/**
+ * Flat disc feet set well apart, a wide hip block and a centre plate. Feet take turns lifting
+ * while walking, kick while climbing and hang lower, closer together, while carried.
+ */
+function drawLowerBody(ctx: CanvasRenderingContext2D, pose: CreaturePose, k: Kit): void {
+  const M = pose.motion;
+  const walk = Math.min(1, M.walk);
   for (const side of [-1, 1] as const) {
-    const fx = mx(326, side);
+    const step = Math.sin(pose.walkPhase + (side > 0 ? Math.PI : 0));
+    const kick = Math.sin(pose.time * 7 + (side > 0 ? Math.PI : 0)) * M.climb;
+    const fx = lerp(mx(326, side) + M.facing * 14 * step * walk, mx(346, side), M.held);
+    const fy = 483 - 30 * Math.max(0, step) * walk + 34 * M.held - 12 * Math.max(0, kick);
+    ctx.save();
+    ctx.translate(0, fy - 483);
+    drawFoot(ctx, k, fx);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.roundRect(282, 384, 220, 84, 28);
+  ctx.fillStyle = k.steel;
+  ctx.fill();
+  ink(ctx, k);
+  ctx.beginPath();
+  ctx.rect(364, 440, 56, 52);
+  ctx.fillStyle = k.steelDark;
+  ctx.fill();
+  ink(ctx, k, 5);
+}
+
+function drawFoot(ctx: CanvasRenderingContext2D, k: Kit, fx: number): void {
+  {
     ctx.beginPath();
     ctx.ellipse(fx, 483, 30, 13, 0, 0, Math.PI * 2);
     ctx.fillStyle = k.steelLight;
@@ -544,16 +583,6 @@ function drawLowerBody(ctx: CanvasRenderingContext2D, k: Kit): void {
     ctx.fillStyle = k.shine;
     ctx.fill();
   }
-  ctx.beginPath();
-  ctx.roundRect(282, 384, 220, 84, 28);
-  ctx.fillStyle = k.steel;
-  ctx.fill();
-  ink(ctx, k);
-  ctx.beginPath();
-  ctx.rect(364, 440, 56, 52);
-  ctx.fillStyle = k.steelDark;
-  ctx.fill();
-  ink(ctx, k, 5);
 }
 
 /** Faceted chest plate covering the chin, with a centre seam and a gem plaque. */

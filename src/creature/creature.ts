@@ -1,4 +1,4 @@
-import { clamp, lerp, type Vec2 } from '../core/math';
+import { clamp, lerp, TAU, type Vec2 } from '../core/math';
 import { Spring, Spring2 } from '../core/physics/spring';
 import { VerletChain } from '../core/physics/verlet';
 import { Rng } from '../core/random';
@@ -23,6 +23,45 @@ const GRAVITY = 2000; // px/s² at size 1
 const HOP_SPEED = 380;
 /** Feet stick out this far below the body (units of body radius). */
 export const FEET_HEIGHT = 0.07;
+
+/**
+ * How the body is moving through the world, set every frame by the behaviour layer (walking,
+ * climbing, being carried). The renderer and species drawings read it from the pose.
+ */
+export interface Motion {
+  /** Walk cycle strength: walking speed relative to the species' walk speed (can exceed 1). */
+  walk: number;
+  /** Direction of travel. */
+  facing: -1 | 1;
+  /** Being carried by the cursor, 0..1. */
+  held: number;
+  /** Pendulum angle while carried (radians). */
+  swing: number;
+  /** Clinging to a window side, 0..1. */
+  climb: number;
+  /** Which side the wall is on (+1 = wall to the right of the pet). */
+  climbSide: -1 | 1;
+  /** Lowered body (sitting, sleeping, crouching to pounce), 0..1. */
+  crouch: number;
+  /** Asleep: eyes shut, slow breathing, 0..1. */
+  sleep: number;
+  /** In the air (thrown, jumping, falling) with this vertical speed in px/s. */
+  airborne: boolean;
+  airVy: number;
+}
+
+export const STILL: Motion = {
+  walk: 0,
+  facing: 1,
+  held: 0,
+  swing: 0,
+  climb: 0,
+  climbSide: 1,
+  crouch: 0,
+  sleep: 0,
+  airborne: false,
+  airVy: 0,
+};
 
 /** Everything the renderer needs for one frame. Local coordinates: origin at the feet, y down. */
 export interface CreaturePose {
@@ -52,6 +91,9 @@ export interface CreaturePose {
   hover: number;
   /** Seconds since the creature was created (for flicker and other time-based drawing). */
   time: number;
+  motion: Motion;
+  /** Walk cycle phase in radians (one step per π). */
+  walkPhase: number;
 }
 
 export interface CreatureOptions {
@@ -74,6 +116,10 @@ export class Creature {
   alpha = 1;
   /** Manual face overrides (creature lab). */
   manualFace: Partial<FaceParams> | null = null;
+  /** Set each frame by the behaviour layer. */
+  motion: Motion = { ...STILL };
+  /** Height of the ground under the pet for its shadow (null: at its feet). */
+  shadowY: number | null = null;
 
   readonly rng: Rng;
   readonly mixer = new ExpressionMixer();
@@ -89,6 +135,7 @@ export class Creature {
   private liftV = 0;
   private hopQueue: { t: number; strength: number } | null = null;
   private time = 0;
+  private walkPhase = 0;
   private pose!: CreaturePose;
   private primed = false;
 
@@ -267,6 +314,11 @@ export class Creature {
 
   update(dt: number): void {
     this.time += dt;
+    const M = this.motion;
+    this.walkPhase =
+      (this.walkPhase + M.walk * (this.species.movement?.stepHz ?? 2.2) * Math.PI * dt) % TAU;
+    if (M.walk === 0) this.walkPhase *= 1 - Math.min(1, dt * 6);
+    this.anim.sleepiness = M.sleep;
     this.mixer.update(dt);
     this.anim.update(dt);
 
@@ -306,6 +358,12 @@ export class Creature {
   private land(impact: number): void {
     this.lift = 0;
     this.liftV = 0;
+    this.impact(impact);
+  }
+
+  /** Landing squash, jiggle and dust for an impact at `speed` px/s (hops, falls, throws). */
+  impact(speed: number): void {
+    const impact = speed / Math.sqrt(this.appearance.size);
     const k = clamp(impact / HOP_SPEED, 0, 2.5);
     this.stretch.impulse(-k * 1.9);
     this.ring.impulse(Math.PI / 2, -k * 1.6 * this.soft, 0.7);
@@ -341,7 +399,11 @@ export class Creature {
     const R = p.R;
     const local = restPoint(this.shape, d.rootAngle);
     const root = this.toWorld(local.x * R * d.rootInset, p.center.y + local.y * R * d.rootInset);
-    const droop = clamp((d.droopFor?.(p.face) ?? p.face.droop) + (d.droopBias ?? 0), 0, 1.1);
+    const droop = clamp(
+      Math.max(d.droopFor?.(p.face) ?? p.face.droop, p.motion.held * 1.1) + (d.droopBias ?? 0),
+      0,
+      1.1,
+    );
     const pts: Vec2[] = [root];
     let a = d.restAngle + p.angle;
     let cur = root;
@@ -365,20 +427,40 @@ export class Creature {
       for (const k of Object.keys(bias) as (keyof FaceParams)[]) face[k] += bias[k] ?? 0;
     }
     if (this.manualFace) face = { ...face, ...this.manualFace };
+    const M = this.motion;
     face = clampFace({
       ...face,
-      eyeOpen: face.eyeOpen * L.eyeOpenMul,
+      eyeOpen: face.eyeOpen * L.eyeOpenMul * (1 - M.sleep),
       mouthOpen: Math.min(1, face.mouthOpen + L.mouthOpenAdd),
       tilt: face.tilt + L.tilt,
-      armRaise: Math.max(face.armRaise, L.armRaise),
+      // Clinging to a wall needs both arms up; dangling lets them hang.
+      armRaise: Math.max(face.armRaise, L.armRaise, M.climb * 0.95) * (1 - M.held * 0.85),
     });
 
-    // Squash/stretch: spring plus breathing, plus stretch while moving fast in the air.
-    const airStretch = this.lift > 0 ? clamp(Math.abs(this.liftV) * 0.00022, 0, 0.12) : 0;
-    const sy = 1 + this.stretch.value + L.breathe + airStretch;
-    const sx = 1 - (this.stretch.value + airStretch) * 0.65 - L.breathe * 0.45;
+    // Squash/stretch: spring plus breathing, plus stretch while moving fast in the air or dangling.
+    const airStretch =
+      (this.lift > 0 ? clamp(Math.abs(this.liftV) * 0.00022, 0, 0.12) : 0) +
+      (M.airborne ? clamp(Math.abs(M.airVy) * 0.0001, 0, 0.12) : 0) +
+      M.held * 0.08;
+    // Walk cycle: the body rises a little on each step and settles between steps.
+    const walk = Math.min(1, M.walk);
+    const stepUp = Math.abs(Math.sin(this.walkPhase));
+    const walkLift = R * 0.07 * walk * stepUp;
+    const walkSquash = 0.035 * walk * (1 - stepUp);
+    const sy = 1 + this.stretch.value + L.breathe + airStretch - walkSquash - 0.12 * M.crouch;
+    const sx =
+      1 -
+      (this.stretch.value + airStretch) * 0.65 -
+      L.breathe * 0.45 +
+      walkSquash * 0.6 +
+      0.06 * M.crouch;
 
-    const angle = face.tilt * 0.2 + L.sway * 0.09;
+    const angle =
+      face.tilt * 0.2 +
+      L.sway * 0.09 +
+      M.facing * walk * 0.07 +
+      M.held * M.swing +
+      M.climb * M.climbSide * 0.1;
     const hoverAmt = this.species.hover ?? 0;
     const hover = hoverAmt > 0 ? R * hoverAmt * (1 + 0.14 * Math.sin(this.time * 2.1)) : 0;
     const center = { x: 0, y: -(this.shape.ryBottom + FEET_HEIGHT) * R };
@@ -389,14 +471,15 @@ export class Creature {
 
     this.pose = {
       R,
-      feet: { x: this.x, y: this.y - this.lift - hover },
-      groundY: this.y,
+      feet: { x: this.x, y: this.y - this.lift - hover - walkLift },
+      groundY: this.shadowY ?? this.y,
       sx,
       sy,
       angle,
       center,
       face,
-      look: { x: L.lookX, y: L.lookY },
+      // Walking looks where it's going.
+      look: { x: lerp(L.lookX, M.facing * 0.85, walk), y: L.lookY * (1 - walk) },
       faceShift: {
         x: L.lookX * R * 0.1 + this.faceLag.x.value,
         y: L.lookY * R * 0.06 + this.faceLag.y.value,
@@ -407,6 +490,8 @@ export class Creature {
       lift: this.lift,
       hover,
       time: this.time,
+      motion: { ...M },
+      walkPhase: this.walkPhase,
     };
   }
 

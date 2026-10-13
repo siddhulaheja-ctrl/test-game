@@ -293,6 +293,16 @@ export const CAT: SpeciesDef = {
     },
   ],
   softness: 0.75,
+  // Quick, springy and a good climber.
+  movement: {
+    walkSpeed: 70,
+    runSpeed: 260,
+    jumpUp: 250,
+    jumpAcross: 230,
+    canClimb: true,
+    climbSpeed: 95,
+    stepHz: 3.2,
+  },
   shadowScale: 0.85,
   update,
   draw(ctx, c, basePose) {
@@ -309,10 +319,17 @@ export const CAT: SpeciesDef = {
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       const ears: [number, number] = [twitch(s.ear[0], EAR_TWITCH), twitch(s.ear[1], EAR_TWITCH)];
+      // Walking or dangling: the cat gets up off its haunches and its legs show.
+      const stand = Math.min(1, pose.motion.walk);
+      const legsOut = Math.max(stand, pose.motion.held);
+      if (legsOut > 0.02) drawHindLegs(ctx, k, pose, stand, legsOut);
+      ctx.save();
+      ctx.translate(0, -BODY_RISE * stand);
       drawSilhouette(ctx, k, f, m, ears);
       const shift = { x: (pose.faceShift.x / scale) * 0.7, y: (pose.faceShift.y / scale) * 0.7 };
       drawFace(ctx, k, pose, m, shift, twitch(s.whisker, WHISKER_TWITCH));
-      drawFrontLegs(ctx, c, pose, k);
+      ctx.restore();
+      drawFrontLegs(ctx, c, pose, k, stand, legsOut);
     });
   },
 };
@@ -588,7 +605,7 @@ function drawLegHints(ctx: CanvasRenderingContext2D, k: Kit, lifted: [number, nu
   ctx.save();
   ctx.strokeStyle = k.furLight;
   ctx.lineWidth = 1.8;
-  ctx.globalAlpha *= 0.35 * (1 - clamp((Math.max(...lifted) - 0.3) * 5, 0, 1));
+  ctx.globalAlpha *= 0.35 * (1 - Math.max(...lifted));
   ctx.beginPath();
   ctx.moveTo(0, -44);
   ctx.quadraticCurveTo(1.5, -22, 0, -4);
@@ -614,8 +631,67 @@ function headGradient(ctx: CanvasRenderingContext2D, k: Kit, dx = 0, dy = 0): Ca
  * Front legs: resting on the ground, lifted to the chest ("bunny paws") as arms raise, and the
  * right one beckons like a lucky cat while waving. Raised paws show their toe beans.
  */
-function drawFrontLegs(ctx: CanvasRenderingContext2D, c: Creature, pose: CreaturePose, k: Kit) {
+/** How far the body rises off its haunches when standing to walk (cat units). */
+const BODY_RISE = 14;
+
+/** Hind legs, behind the body: trotting while walking, hanging loose while carried. */
+function drawHindLegs(
+  ctx: CanvasRenderingContext2D,
+  k: Kit,
+  pose: CreaturePose,
+  stand: number,
+  show: number,
+) {
+  const M = pose.motion;
+  const walk = Math.min(1, M.walk);
+  for (const side of [-1, 1] as const) {
+    // Diagonal gait: each hind leg moves with the opposite front leg.
+    const step = Math.sin(pose.walkPhase + (side > 0 ? 0 : Math.PI));
+    const lift = Math.max(0, step) * walk;
+    const hip = { x: side * 40, y: -34 - BODY_RISE * stand };
+    const walking = { x: side * 46 + M.facing * 6 * step * walk, y: -5 - 9 * lift };
+    const hanging = { x: side * 38 + Math.sin(pose.time * 2.6 + side) * 2, y: 2 };
+    const foot = {
+      x: lerp(walking.x, hanging.x, M.held),
+      y: lerp(walking.y, hanging.y, M.held),
+    };
+    ctx.save();
+    ctx.globalAlpha *= clamp(show * 4, 0, 1);
+    ctx.beginPath();
+    ctx.moveTo(hip.x, hip.y);
+    ctx.lineTo(foot.x, foot.y);
+    ctx.strokeStyle = k.ink;
+    ctx.lineWidth = 18 + INK_W * 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(foot.x, foot.y, 13, 7, 0, 0, TAU);
+    ctx.lineWidth = INK_W * 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hip.x, hip.y);
+    ctx.lineTo(foot.x, foot.y);
+    ctx.strokeStyle = k.fur;
+    ctx.lineWidth = 18;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(foot.x, foot.y, 13, 7, 0, 0, TAU);
+    ctx.fillStyle = k.fur;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFrontLegs(
+  ctx: CanvasRenderingContext2D,
+  c: Creature,
+  pose: CreaturePose,
+  k: Kit,
+  stand: number,
+  legsOut: number,
+) {
   const f = pose.face;
+  const M = pose.motion;
+  const walk = Math.min(1, M.walk);
   const waving = c.anim.currentFidget === 'wave';
   const wave = pose.arms[1] - lerp(1.15, -0.75, f.armRaise);
   // Waves and yawns lift the generic "arms"; a cat keeps its paws down unless the mood says so.
@@ -623,18 +699,39 @@ function drawFrontLegs(ctx: CanvasRenderingContext2D, c: Creature, pose: Creatur
   const legs = ([-1, 1] as const).map((side) => {
     const beckon = side > 0 && waving ? clamp(f.armRaise / 0.9, 0, 1) : 0;
     const raise = clamp(exprRaise, 0, 1);
-    const rest = { x: side * 19, y: -8 };
+    // Resting paw: sitting, trotting (alternate steps), or hanging while carried.
+    const step = Math.sin(pose.walkPhase + (side > 0 ? Math.PI : 0));
+    const stepLift = Math.max(0, step) * walk;
+    const trot = { x: side * 19 + M.facing * 7 * step * walk, y: -6 - 11 * stepLift };
+    const hang = { x: side * 17 + Math.sin(pose.time * 3 + side) * 2, y: 4 };
+    const sit = { x: side * 19, y: -8 };
+    const rest = {
+      x: lerp(lerp(sit.x, trot.x, walk), hang.x, M.held),
+      y: lerp(lerp(sit.y, trot.y, walk), hang.y, M.held),
+    };
     const up = { x: side * (26 + raise * 4), y: -8 - 62 * raise };
     const high = { x: side * 40, y: -120 };
     const paw = {
       x: lerp(lerp(rest.x, up.x, raise), high.x, beckon),
       y: lerp(lerp(rest.y, up.y, raise), high.y, beckon),
     };
+    // Clinging to a window side: both paws reach up beside the head and grip, taking turns.
+    const grip = {
+      x: M.climbSide * 62 + side * 9,
+      y: -122 - side * M.climbSide * 16 + Math.sin(pose.time * 9 + (side > 0 ? Math.PI : 0)) * 6,
+    };
+    paw.x = lerp(paw.x, grip.x, M.climb);
+    paw.y = lerp(paw.y, grip.y, M.climb);
+    const lifted = Math.max(raise * (1 - M.held), beckon, M.climb);
     const angle = side * (beckon * (0.25 + wave * 1.6) - raise * 0.25);
-    return { shoulder: { x: side * 21, y: -74 }, paw, lifted: Math.max(raise, beckon), angle };
+    const show = Math.max(clamp((lifted - 0.3) * 5, 0, 1), clamp(legsOut * 4, 0, 1));
+    // Walking legs come out from under the chest; lifted ones reach from the shoulder.
+    const shoulderY = lerp(-48, -74, clamp(lifted, 0, 1)) - BODY_RISE * stand;
+    const shoulder = { x: side * 21, y: shoulderY };
+    return { shoulder, paw, lifted, angle, show };
   });
-  drawLegHints(ctx, k, [legs[0]!.lifted, legs[1]!.lifted]);
-  for (const l of legs) drawLeg(ctx, k, l.shoulder, l.paw, l.lifted, l.angle);
+  drawLegHints(ctx, k, [legs[0]!.show, legs[1]!.show]);
+  for (const l of legs) drawLeg(ctx, k, l.shoulder, l.paw, l.lifted, l.angle, l.show);
 }
 
 function drawLeg(
@@ -644,6 +741,7 @@ function drawLeg(
   paw: Vec2,
   lifted: number,
   pawAngle: number,
+  show: number,
 ): void {
   const pawPath = () => {
     ctx.beginPath();
@@ -651,7 +749,6 @@ function drawLeg(
   };
   // A lifted leg is drawn over the body (outline, then fur); resting legs are part of the
   // silhouette, so only their toes show.
-  const show = clamp((lifted - 0.3) * 5, 0, 1);
   if (show > 0) {
     ctx.save();
     ctx.globalAlpha *= show;
