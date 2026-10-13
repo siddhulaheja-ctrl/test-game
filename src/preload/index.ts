@@ -36,6 +36,8 @@ const bridge: BuddyBridge = {
   onPointerUp: (cb) => subscribe<{ x: number; y: number }>(IPC.pointerUp, cb),
   onDisplayFlags: (cb) => subscribe<DisplayFlags>(IPC.displayFlags, cb),
   onInputReset: (cb) => subscribe<void>(IPC.inputReset, () => cb()),
+  onEvacuate: (cb) => subscribe<void>(IPC.evacuate, () => cb()),
+  sendEvacuated: (snaps) => ipcRenderer.send(IPC.evacuated, snaps),
 };
 
 contextBridge.exposeInMainWorld('buddy', bridge);

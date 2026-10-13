@@ -81,12 +81,9 @@ export class OverlayWindow {
     return this.display;
   }
 
-  /** Re-fit to the display's work area (taskbar moved, resolution changed, DPI changed). */
-  refit(display: DisplayInfo): void {
-    if (this.win.isDestroyed()) return;
+  /** Same work area, other details changed (primary flag, full bounds). */
+  setInfo(display: DisplayInfo): void {
     this.display = display;
-    this.win.setBounds(display.workArea);
-    this.resetInput();
   }
 
   /**

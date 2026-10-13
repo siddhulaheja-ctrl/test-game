@@ -2,7 +2,7 @@ import type { MenuItem } from 'electron';
 import type { AppState } from '../shared/ipc';
 import { FakeWindows, type WindowProvider } from '../platform/windowProvider';
 import type { Rect } from '../world/geometry';
-import type { WindowInfo } from '../world/world';
+import type { DisplayInfo, WindowInfo } from '../world/world';
 import type { OverlayWindow } from './overlayWindow';
 import type { BuddyTray } from './tray';
 
@@ -16,6 +16,7 @@ interface HookDeps {
   owners(): Record<string, number>;
   fullscreen(): number[];
   pollNow(): void;
+  setDisplays: ((list: DisplayInfo[]) => void) | null;
 }
 
 export interface BuddyTestHooks {
@@ -33,6 +34,9 @@ export interface BuddyTestHooks {
   fullscreenDisplays(): number[];
   setCovered(on: boolean): void;
   raises(): number;
+  /** Fake displays only (BUDDY_FAKE_DISPLAYS). */
+  setDisplays(list: DisplayInfo[]): void;
+  overlayIds(): number[];
 }
 
 /**
@@ -82,6 +86,11 @@ export function installTestHooks(deps: HookDeps): void {
       fake().covered = on;
     },
     raises: () => deps.overlays().reduce((n, o) => n + o.raises, 0),
+    setDisplays: (list) => {
+      if (!deps.setDisplays) throw new Error('Not using fake displays');
+      deps.setDisplays(list);
+    },
+    overlayIds: () => deps.overlays().map((o) => o.win.id),
     fullscreenDisplays: () => deps.fullscreen(),
   };
   (globalThis as unknown as { __buddyTest: BuddyTestHooks }).__buddyTest = hooks;

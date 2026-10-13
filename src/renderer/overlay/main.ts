@@ -192,6 +192,13 @@ bridge?.onHandoff((h) => {
   applyQuiet();
   loop.markActive();
 });
+// This window is about to be replaced (its display's work area changed): pass the pets on.
+bridge?.onEvacuate(() => {
+  const snaps = stage.pets.map((p) => p.snapshot());
+  for (const p of [...stage.pets]) stage.removePet(p.id);
+  bridge?.sendEvacuated(snaps);
+  loop.pause();
+});
 bridge?.onDisplayFlags((f) => {
   flags = f;
   applyQuiet();

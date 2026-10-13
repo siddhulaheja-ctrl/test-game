@@ -141,6 +141,10 @@ export const IPC = {
   pointerUp: 'pointer:up',
   /** main → renderer: fullscreen apps per display. */
   displayFlags: 'display:flags',
+  /** main → renderer: hand over all your pets (the window is about to be re-created). */
+  evacuate: 'pets:evacuate',
+  /** renderer → main (send): snapshots of the pets, in reply to `evacuate`. */
+  evacuated: 'pets:evacuated',
   /** main → renderer: the window went back to click-through (shown, moved): reset mouse state. */
   inputReset: 'overlay:input-reset',
 } as const;
@@ -164,4 +168,6 @@ export interface BuddyBridge {
   onPointerUp(cb: (p: { x: number; y: number }) => void): () => void;
   onDisplayFlags(cb: (f: DisplayFlags) => void): () => void;
   onInputReset(cb: () => void): () => void;
+  onEvacuate(cb: () => void): () => void;
+  sendEvacuated(snaps: PetSnapshot[]): void;
 }

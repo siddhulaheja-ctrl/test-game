@@ -280,3 +280,38 @@ test('if another window covers a hovered pet, the overlay is put back on top', a
   );
   await expect.poll(() => hooks((h) => h.raises()), { timeout: 5000 }).toBeGreaterThan(before);
 });
+
+test('when the taskbar hides, the overlay is re-created and pets stay grabbable', async () => {
+  const page = await overlayFor(1);
+  await expect.poll(async () => (await ov(page, (o) => o.pets())).length).toBe(2);
+  await ov(page, (o) => o.place('cat', 300, 560, 60));
+  const before = await hooks((h) => h.overlayIds());
+
+  // The taskbar on display 1 disappears: its work area grows to the full screen.
+  const grown = DISPLAYS.map((d) =>
+    d.id === 1 ? { ...d, workArea: { ...d.workArea, height: 600 } } : d,
+  );
+  await app.evaluate((_e, list) => {
+    (globalThis as unknown as Hooks).__buddyTest.setDisplays(list);
+  }, grown);
+
+  await expect
+    .poll(async () => (await hooks((h) => h.overlayIds())).join())
+    .not.toBe(before.join());
+  const fresh = await overlayFor(1);
+  await ov(fresh, (o) => o.ignoreRealCursor());
+  await expect
+    .poll(async () => (await ov(fresh, (o) => o.pets())).map((p) => p.id).sort())
+    .toEqual(['cat', 'pekka']);
+  // The cat carried over (it fell to the new, lower floor) rather than being re-spawned elsewhere.
+  await expect.poll(async () => (await pet(fresh, 'cat'))?.y, { timeout: 5000 }).toBe(600);
+  expect(Math.abs((await pet(fresh, 'cat'))!.x - 300)).toBeLessThan(120);
+
+  await ov(fresh, (o) => o.hold(60));
+  const c = await ov(fresh, (o) => o.petCenter());
+  await fresh.evaluate(
+    ([x, y]) => (window as unknown as { __overlay: OverlayHooks }).__overlay.simulateCursor(x, y),
+    [c.x, c.y] as const,
+  );
+  await expect.poll(() => hooks((h) => h.isInteractive())).toBe(true);
+});

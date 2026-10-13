@@ -18,8 +18,9 @@ import {
 } from '../platform/windowProvider';
 import { Win32Windows } from '../platform/win32/win32Windows';
 import { bottom, right, sameRect, type Rect } from '../world/geometry';
-import type { WindowInfo, WorldSnapshot } from '../world/world';
-import { fakeDisplays, realDisplays } from './displays';
+import type { PetSnapshot } from '../behaviors/snapshot';
+import type { DisplayInfo, WindowInfo, WorldSnapshot } from '../world/world';
+import { fakeDisplays, realDisplays, type FakeDisplaySource } from './displays';
 import { JsonStore } from './jsonStore';
 import { OverlayWindow } from './overlayWindow';
 import { pageLocation, preloadPath } from './paths';
@@ -133,25 +134,81 @@ function start(): void {
     }
   };
 
+  /** Pets waiting for a re-created overlay to load (display id → snapshots). */
+  const pendingAdopt = new Map<number, PetSnapshot[]>();
+  /** Displays whose overlay is being re-created right now. */
+  const recreating = new Set<number>();
+
+  function createOverlay(d: DisplayInfo): void {
+    const o = new OverlayWindow(d);
+    overlays.set(d.id, o);
+    o.win.webContents.on('did-finish-load', () => {
+      loaded.add(d.id);
+      o.win.webContents.send(IPC.world, world());
+      const snaps = (pendingAdopt.get(d.id) ?? []).filter((s) => owners.get(s.id) === d.id);
+      pendingAdopt.delete(d.id);
+      for (const snap of snaps) o.win.webContents.send(IPC.handoff, { snap, toDisplay: d.id });
+      const adopted = new Set(snaps.map((s) => s.id));
+      const mine = [...owners]
+        .filter(([id, disp]) => disp === d.id && !adopted.has(id))
+        .map(([id]) => id);
+      if (mine.length) {
+        o.win.webContents.send(IPC.pets, { spawn: mine.map((id) => ({ id, species: id })) });
+      }
+      o.win.webContents.send(IPC.displayFlags, { fullscreen });
+    });
+    o.win.once('ready-to-show', applyVisibility);
+  }
+
+  /** Ask an overlay for snapshots of its pets (empty if it doesn't answer quickly). */
+  function evacuate(o: OverlayWindow): Promise<PetSnapshot[]> {
+    if (!loaded.has(o.info.id) || o.win.isDestroyed()) return Promise.resolve([]);
+    const wc = o.win.webContents;
+    return new Promise((resolve) => {
+      const done = (snaps: PetSnapshot[]) => {
+        clearTimeout(timer);
+        ipcMain.removeListener(IPC.evacuated, onReply);
+        resolve(snaps);
+      };
+      const onReply = (e: Electron.IpcMainEvent, snaps: unknown) => {
+        if (e.sender === wc) done(Array.isArray(snaps) ? (snaps as PetSnapshot[]) : []);
+      };
+      const timer = setTimeout(() => done([]), 800);
+      ipcMain.on(IPC.evacuated, onReply);
+      wc.send(IPC.evacuate);
+    });
+  }
+
+  /**
+   * The work area changed (taskbar shown or hidden, resolution or scale changed). Resizing a
+   * transparent window in place can leave Windows hit-testing its old area, so clicks on pets in
+   * the new part fall through. Re-create the window at the new size and hand the pets over.
+   */
+  async function recreateOverlay(d: DisplayInfo): Promise<void> {
+    const old = overlays.get(d.id);
+    if (!old || recreating.has(d.id)) return;
+    recreating.add(d.id);
+    log(`display ${d.id} work area changed: re-creating its overlay`);
+    const snaps = await evacuate(old);
+    old.destroy();
+    loaded.delete(d.id);
+    watched.delete(d.id);
+    pendingAdopt.set(d.id, snaps);
+    createOverlay(d);
+    windows.setOwnWindows([...overlays.values()].map((o) => o.nativeId()));
+    recreating.delete(d.id);
+    // It may have changed again meanwhile.
+    syncOverlays();
+  }
+
   function syncOverlays(): void {
     const list = displays.list();
     for (const d of list) {
       const existing = overlays.get(d.id);
-      if (existing) {
-        existing.refit(d);
-        continue;
-      }
-      const o = new OverlayWindow(d);
-      overlays.set(d.id, o);
-      o.win.webContents.on('did-finish-load', () => {
-        loaded.add(d.id);
-        o.win.webContents.send(IPC.world, world());
-        const mine = [...owners].filter(([, disp]) => disp === d.id).map(([id]) => id);
-        if (mine.length)
-          o.win.webContents.send(IPC.pets, { spawn: mine.map((id) => ({ id, species: id })) });
-        o.win.webContents.send(IPC.displayFlags, { fullscreen });
-      });
-      o.win.once('ready-to-show', applyVisibility);
+      if (!existing) createOverlay(d);
+      else if (recreating.has(d.id)) continue;
+      else if (!sameRect(existing.info.workArea, d.workArea)) void recreateOverlay(d);
+      else existing.setInfo(d);
     }
     // Displays that went away: their pets move to the primary display.
     for (const [id, o] of overlays) {
@@ -487,6 +544,7 @@ function start(): void {
       owners: () => Object.fromEntries(owners),
       fullscreen: () => fullscreen,
       pollNow: pollWindows,
+      setDisplays: 'set' in displays ? (list) => (displays as FakeDisplaySource).set(list) : null,
     });
   }
 }

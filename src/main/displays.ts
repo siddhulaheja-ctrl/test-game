@@ -29,10 +29,20 @@ export function realDisplays(): DisplaySource {
   };
 }
 
-export function fakeDisplays(json: string): DisplaySource {
-  const list = JSON.parse(json) as DisplayInfo[];
+/** Displays for tests; `set` replaces them (like a taskbar hiding or a monitor being added). */
+export interface FakeDisplaySource extends DisplaySource {
+  set(list: DisplayInfo[]): void;
+}
+
+export function fakeDisplays(json: string): FakeDisplaySource {
+  let list = JSON.parse(json) as DisplayInfo[];
+  const listeners: (() => void)[] = [];
   return {
     list: () => list.map((d, i) => ({ ...d, primary: d.primary ?? i === 0 })),
-    onChange: () => {},
+    onChange: (cb) => listeners.push(cb),
+    set: (next) => {
+      list = next;
+      for (const cb of listeners) cb();
+    },
   };
 }
