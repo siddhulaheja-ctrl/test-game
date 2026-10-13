@@ -138,6 +138,8 @@ export const IPC = {
   pointerUp: 'pointer:up',
   /** main → renderer: fullscreen apps per display. */
   displayFlags: 'display:flags',
+  /** main → renderer: the window went back to click-through (shown, moved): reset mouse state. */
+  inputReset: 'overlay:input-reset',
 } as const;
 
 /** API exposed on `window.buddy` by the preload script. */
@@ -158,4 +160,5 @@ export interface BuddyBridge {
   sendPointerUp(p: { x: number; y: number }): void;
   onPointerUp(cb: (p: { x: number; y: number }) => void): () => void;
   onDisplayFlags(cb: (f: DisplayFlags) => void): () => void;
+  onInputReset(cb: () => void): () => void;
 }

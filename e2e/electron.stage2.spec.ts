@@ -34,6 +34,7 @@ interface OverlayHooks {
   place(id: string, x: number, y: number, seconds?: number): boolean;
   goTo(id: string, x: number, y: number): boolean;
   ignoreRealCursor(): void;
+  simulateCursor(x: number, y: number): void;
   petCenter(): { x: number; y: number };
 }
 
@@ -197,6 +198,7 @@ test('dragging a pet with the mouse picks it up, and letting go throws it', asyn
     .poll(async () => (await ov(page, (o) => o.pets())).map((p) => p.id))
     .toEqual(['cat']);
   await ov(page, (o) => o.place('cat', 200, 560, 60));
+  await page.waitForTimeout(600); // let any hop in progress land
   const c = await ov(page, (o) => o.petCenter());
   // The real pointer can't be moved in CI, so drive the overlay's own mouse handlers.
   const mouse = (type: 'move' | 'down' | 'up', x: number, y: number) =>
@@ -226,4 +228,31 @@ test('dragging a pet with the mouse picks it up, and letting go throws it', asyn
   };
   await expect.poll(async () => (await landed())?.contact, { timeout: 8000 }).toBe('surface');
   expect((await landed())!.x).toBeGreaterThan(c.x + 80);
+});
+
+test('pets can still be grabbed after a fullscreen app hid and showed the overlay', async () => {
+  const page = await overlayFor(1);
+  await expect.poll(async () => (await ov(page, (o) => o.pets())).length).toBe(2);
+  await ov(page, (o) => o.hold(60));
+  const hover = async () => {
+    const c = await ov(page, (o) => o.petCenter());
+    await page.evaluate(
+      ([x, y]) => (window as unknown as { __overlay: OverlayHooks }).__overlay.simulateCursor(x, y),
+      [c.x, c.y] as const,
+    );
+  };
+  await hover();
+  await expect.poll(() => hooks((h) => h.isInteractive())).toBe(true);
+
+  // A fullscreen app comes up while the cursor is on a pet, then goes away.
+  await hooks((h) => h.setFullscreen([{ x: 0, y: 0, width: 800, height: 600 }]));
+  await expect.poll(async () => (await hooks((h) => h.overlays()))[0]!.visible).toBe(false);
+  await hooks((h) => h.setFullscreen([]));
+  await expect.poll(async () => (await hooks((h) => h.overlays()))[0]!.visible).toBe(true);
+
+  await page.evaluate(() =>
+    (window as unknown as { __overlay: OverlayHooks }).__overlay.simulateCursor(5, 5),
+  );
+  await hover();
+  await expect.poll(() => hooks((h) => h.isInteractive())).toBe(true);
 });

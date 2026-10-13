@@ -9,7 +9,7 @@ import type { World } from '../world/world';
 import { type Surface } from '../world/world';
 import { Brain, type BehaviorState } from './brain';
 import type { CursorSense } from './cursorSense';
-import { Fall, Held, OPTIONS, reflexes } from './library';
+import { Fall, Held, OPTIONS, reflexes, Trip } from './library';
 import { Mover, type MoverEvent } from './mover';
 import type { PetSnapshot } from './snapshot';
 
@@ -286,7 +286,10 @@ export class Pet {
       m.y = snap.y;
       pet.grab({ x: snap.x, y: snap.y - m.size.height });
     } else if (snap.heading) {
-      pet.heading = snap.heading;
+      // Carry on to where it was going before it crossed onto this display.
+      const h = snap.heading;
+      const s = world.surfaceAt(h.x, h.y, 2) ?? world.landingBetween(h.x, h.y - 1, Infinity);
+      if (s) pet.brain.interrupt(pet, new Trip({ surface: s, x: h.x }, { name: 'trip' }));
     }
     pet.syncCreature(0);
     return pet;

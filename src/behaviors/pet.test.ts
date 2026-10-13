@@ -122,6 +122,26 @@ describe('Pet', () => {
   });
 });
 
+describe('hand-over between displays', () => {
+  it('a restored pet carries on to where it was heading', () => {
+    const world = new World({
+      displays: [display(1, 0), display(2, 1400)],
+      windows: [],
+      safeZones: [],
+    });
+    const pet = makePet('cat', world);
+    pet.mover.place(world, 1300, 860);
+    const snap = { ...pet.snapshot(), heading: { x: 2200, y: 860 } };
+    const restored = Pet.restore(snap, world, new CursorSense());
+    expect(restored.brain.current?.name).toBe('trip');
+    const trip = restored.brain.current;
+    for (let i = 0; i < 20 * 60 && restored.brain.current === trip; i++) {
+      restored.update(DT, { quiet: false, others: [] });
+    }
+    expect(restored.mover.x).toBeCloseTo(2200, 0);
+  });
+});
+
 describe('a long wander on a busy desktop', () => {
   for (const species of ['cat', 'pekka']) {
     it(`${species} survives 12 minutes of windows moving, closing and the cursor`, () => {

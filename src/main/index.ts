@@ -376,7 +376,10 @@ function start(): void {
       const metrics = app.getAppMetrics();
       const m: ProcessMetrics = {
         cpuPercent: metrics.reduce((sum, p) => sum + p.cpu.percentCPUUsage, 0),
-        memoryMB: metrics.reduce((sum, p) => sum + p.memory.workingSetSize, 0) / 1024,
+        // Private memory where the OS reports it (Windows): working sets double-count shared pages.
+        memoryMB:
+          metrics.reduce((sum, p) => sum + (p.memory.privateBytes ?? p.memory.workingSetSize), 0) /
+          1024,
       };
       broadcast(IPC.metrics, m);
     });

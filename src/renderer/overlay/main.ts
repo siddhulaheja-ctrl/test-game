@@ -84,6 +84,11 @@ function reportWatched(dt: number): void {
 // --- Loop ---------------------------------------------------------------------------------------
 function update(dt: number): void {
   stage.update(dt);
+  resend -= dt;
+  if (resend <= 0) {
+    resend = 0.5;
+    bridge?.setInteractive(interactivity.isInteractive);
+  }
   if (debug.visible) {
     debug.set(
       'ptr',
@@ -134,11 +139,21 @@ window.addEventListener('mousemove', (e) => {
   cursorAt({ x: e.clientX, y: e.clientY });
 });
 bridge?.onCursor((p) => {
-  if (simulatedCursor || performance.now() - lastLocalMove < 250) return;
-  cursorAt({ x: p.x - stage.origin.x, y: p.y - stage.origin.y });
-  // Windows reports the button globally: a release anywhere ends a drag.
+  if (simulatedCursor) return;
+  // Windows reports the button globally: a release anywhere ends a drag, even if the mouseup
+  // event never reached this window.
   if (p.leftDown === false && stage.isDragging) stage.pointerUp({ x: p.x, y: p.y });
+  if (performance.now() - lastLocalMove < 250) return;
+  cursorAt({ x: p.x - stage.origin.x, y: p.y - stage.origin.y });
 });
+// The window was shown or moved and is click-through again: start over from the cursor.
+bridge?.onInputReset(() => {
+  interactivity.reset();
+  if (stage.isDragging && cursor) stage.pointerUp(toDesk(cursor.x, cursor.y));
+  refreshInteractivity();
+});
+// Re-send the mouse state now and then, so main and this window can never stay out of step.
+let resend = 0;
 /** Last press, for the debug overlay (helps diagnose input on a real desktop). */
 let lastPress = 'none';
 function mouseDown(x: number, y: number): void {
@@ -227,12 +242,13 @@ const petInfo = () =>
     simulatedCursor = true;
     cursorAt({ x, y });
   },
-  /** Centre of the first pet, in this window's coordinates. */
+  /** Centre of the first pet's drawn body (including any hop), in this window's coordinates. */
   petCenter: () => {
     const p = stage.pets[0];
     if (!p) return { x: -1000, y: -1000 };
-    const c = p.center;
-    return { x: c.x - stage.origin.x, y: c.y - stage.origin.y };
+    const pose = p.creature.getPose();
+    const y = pose.feet.y + pose.center.y * pose.sy;
+    return { x: pose.feet.x - stage.origin.x, y: y - stage.origin.y };
   },
   pets: petInfo,
   displayId: () => stage.displayId,
@@ -257,6 +273,7 @@ const petInfo = () =>
     return true;
   },
   isInteractive: () => interactivity.isInteractive,
+  lastPress: () => lastPress,
   /** Tests: forget the real pointer (CI can't move it) and listen only to simulated input. */
   ignoreRealCursor() {
     simulatedCursor = true;

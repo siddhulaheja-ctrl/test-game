@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron';
+import { IPC } from '../shared/ipc';
 import type { DisplayInfo } from '../world/world';
 import { pageLocation, preloadPath } from './paths';
 
@@ -10,6 +11,7 @@ import { pageLocation, preloadPath } from './paths';
 export class OverlayWindow {
   readonly win: BrowserWindow;
   private interactive = false;
+  private lastApplied = 0;
 
   constructor(private display: DisplayInfo) {
     const { x, y, width, height } = display.workArea;
@@ -63,8 +65,14 @@ export class OverlayWindow {
 
   /** Capture the mouse (true) while the cursor is over the creature, otherwise click through. */
   setInteractive(interactive: boolean): void {
-    if (this.win.isDestroyed() || interactive === this.interactive) return;
+    if (this.win.isDestroyed()) return;
+    // A repeat of the current state is still re-applied every couple of seconds: Windows can reset
+    // a window's mouse-ignoring state behind our back (hide/show, fullscreen apps), and the
+    // renderer re-sends its state regularly so the two can't stay out of step.
+    const now = Date.now();
+    if (interactive === this.interactive && now - this.lastApplied < 2000) return;
     this.interactive = interactive;
+    this.lastApplied = now;
     if (interactive) this.win.setIgnoreMouseEvents(false);
     else this.win.setIgnoreMouseEvents(true, { forward: true });
   }
@@ -78,6 +86,20 @@ export class OverlayWindow {
     if (this.win.isDestroyed()) return;
     this.display = display;
     this.win.setBounds(display.workArea);
+    this.resetInput();
+  }
+
+  /**
+   * Back to click-through, re-assert always-on-top, and tell the renderer to forget what it
+   * thought the mouse was doing. Used whenever the window is shown or moved.
+   */
+  resetInput(): void {
+    if (this.win.isDestroyed()) return;
+    this.interactive = false;
+    this.lastApplied = Date.now();
+    this.win.setIgnoreMouseEvents(true, { forward: true });
+    this.win.setAlwaysOnTop(true, 'screen-saver');
+    this.win.webContents.send(IPC.inputReset);
   }
 
   /** Native handle as a hex id (matches WindowProvider ids), to keep overlays out of window lists. */
@@ -91,12 +113,14 @@ export class OverlayWindow {
   }
 
   show(): void {
-    if (!this.win.isDestroyed() && !this.win.isVisible()) this.win.showInactive();
+    if (this.win.isDestroyed() || this.win.isVisible()) return;
+    this.win.showInactive();
+    this.resetInput();
   }
 
   hide(): void {
     if (this.win.isDestroyed()) return;
-    this.setInteractive(false);
     this.win.hide();
+    this.resetInput();
   }
 }
