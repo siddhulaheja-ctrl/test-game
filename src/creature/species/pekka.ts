@@ -223,8 +223,9 @@ function drawSwords(ctx: CanvasRenderingContext2D, pose: CreaturePose, k: Kit): 
   const refAngle = Math.atan2(72 - 292, 40 - 207);
   for (const side of [-1, 1] as const) {
     const gx = mx(214, side);
-    const gy = 304 - f.armRaise * 22;
-    const raise = f.armRaise * 0.42 + (side > 0 ? -wave : 0);
+    const gy = 304 - f.armRaise * 22 + f.droop * 8;
+    // Droop (sad, sleepy) lets the blades sag outward; arms up lifts them toward vertical.
+    const raise = f.armRaise * 0.42 - f.droop * 0.32 + (side > 0 ? -wave : 0);
     const angle = side < 0 ? refAngle + raise : Math.PI - refAngle - raise;
     const len = 270;
     const w = 23;
@@ -406,7 +407,8 @@ function drawHelmet(ctx: CanvasRenderingContext2D, pose: CreaturePose, k: Kit): 
   // Eye sockets: triangles (outer-top, inner-top, rounded bottom point). The top edge's slant
   // follows lidTilt; the stern resting slant comes from the species face bias.
   const look = { x: pose.look.x * 6, y: pose.look.y * 4 };
-  const tilt = clamp(f.lidTilt, -1, 1);
+  // A smile softens her stern slant so happy reads as happy, not cross.
+  const tilt = clamp(f.lidTilt - 0.5 * Math.max(0, f.mouthCurve - 0.4), -1, 1);
   const open = clamp(f.eyeOpen, 0, 1.3);
   for (const side of [-1, 1] as const) {
     const outerTop = { x: mx(304, side), y: 178 + Math.max(0, -tilt) * 34 };
@@ -437,10 +439,18 @@ function drawHelmet(ctx: CanvasRenderingContext2D, pose: CreaturePose, k: Kit): 
     ctx.stroke();
     const ex = mx(344, side) + look.x;
     const ey = 204 + look.y - (side > 0 ? f.browAsym * 6 : 0);
-    drawEye(ctx, ex, ey, open, f.eyeSquint, f.pupilScale, k);
+    drawEye(ctx, ex, ey, open, f.eyeSquint, f.pupilScale, f.sparkle, k);
     ctx.restore();
     socket();
     ink(ctx, k);
+  }
+
+  // Blush: soft pink under the sockets when flustered or delighted.
+  const blush = clamp((f.blush - 0.45) * 2, 0, 0.85);
+  if (blush > 0) {
+    for (const side of [-1, 1] as const) {
+      glow(ctx, mx(326, side) + look.x, 276, 34, '#ff7fb0', blush);
+    }
   }
 
   // Nose plate in the V between the sockets.
@@ -463,6 +473,7 @@ function drawEye(
   open: number,
   squint: number,
   pupil: number,
+  sparkle: number,
   k: Kit,
 ): void {
   if (open < 0.12) {
@@ -497,6 +508,18 @@ function drawEye(
   ctx.arc(0, 0, 15 * clamp(pupil, 0.5, 1.25), 0, Math.PI * 2);
   ctx.fillStyle = k.eye;
   ctx.fill();
+  if (sparkle > 0.1) {
+    // Excited glint: a small four-point star.
+    const r = 9 * sparkle;
+    ctx.beginPath();
+    ctx.moveTo(6, -6 - r);
+    ctx.quadraticCurveTo(7.5, -7.5, 6 + r, -6);
+    ctx.quadraticCurveTo(7.5, -4.5, 6, -6 + r);
+    ctx.quadraticCurveTo(4.5, -4.5, 6 - r, -6);
+    ctx.quadraticCurveTo(4.5, -7.5, 6, -6 - r);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  }
   ctx.restore();
 }
 

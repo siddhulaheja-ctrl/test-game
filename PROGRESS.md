@@ -20,14 +20,13 @@
   - nine blendable expressions (neutral, happy, sad, sleepy, surprised, annoyed, curious, excited, scared) on 16 face values, plus short reactions that fade back to the base mood
   - particles: sparkles, hearts, sweat, zzz, music notes, dust, "!", "?" and butterflies
 - **Character system** (`src/creature/species/`): each character supplies its envelope, palettes (generic colour roles), stiffness, resting face bias and renderer. The lab has a character picker.
-- **P.E.K.K.A (fan version)**, replicating the owner's reference art: rounded helmet with triangular eye sockets and ringed eyes, crescent horns, faceted chest plate with a gem plaque, spiked shoulder spheres, twin striped swords, far-apart disc feet. Five palettes: Reference Steel, Classic Violet, Arena Blue, Arena Red, Max Level Amber.
+- **P.E.K.K.A (fan version)**, replicating the owner's reference art: rounded helmet with triangular eye sockets and ringed eyes, crescent horns, faceted chest plate with a gem plaque, spiked shoulder spheres, twin striped swords, far-apart disc feet. Five palettes: Reference Steel, Classic Violet, Arena Blue, Arena Red, Max Level Amber. Expressions show through the eye sockets (slant, size, squint, blink), a blush under the sockets, eye glints when excited, and the swords (raised when excited or surprised, sagging when sad or sleepy). Blink, yawn, fidgets, hop and poke all work. Screenshot tests cover all nine expressions, every palette, animations and particles at 1x and 2x.
 - **Creature lab** (`npm run lab`, or "Creature Lab…" in the tray): character and palette pickers, expression buttons and blend sliders, manual face sliders, buttons for every animation, fidget, look direction and particle, background, zoom, slow motion, pause and step. Settings survive hot reloads.
 - The overlay shows the character; click it to poke it. Quiet Mode dims it, calms fidgets and turns off particles.
 - **History:** the first character, Glorp (a jelly blob), was removed at the owner's request, and the app was renamed **Desktop Buddy**.
 
 ## Next
 
-- Finish PEKKA: polish every expression and animation for her, then screenshot tests.
 - Next character: chosen by the owner.
 - Stage 2: movement and screen interaction (behaviour state machine, walking, jumping, `WindowProvider` for Windows, cursor play, dragging and throwing, multiple monitors, fullscreen detection).
 

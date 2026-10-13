@@ -6,6 +6,10 @@ The first character is a fan version of **P.E.K.K.A** from Supercell's Clash gam
 
 ![P.E.K.K.A drawn in code](docs/images/pekka.png)
 
+She has every expression the engine supports:
+
+![P.E.K.K.A's nine expressions](docs/images/pekka-expressions.png)
+
 > Status: early development. See [`PROGRESS.md`](PROGRESS.md) for what works today and [`DECISIONS.md`](DECISIONS.md) for why things are built the way they are.
 
 ## Requirements
