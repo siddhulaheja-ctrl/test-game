@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/platform/**/*.ts",
+    "scripts/**/*.mts",
+    "playwright.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}
