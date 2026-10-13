@@ -79,13 +79,26 @@ describe('Pet', () => {
     expect(pet.mover.x).toBeLessThanOrEqual(1400);
   });
 
-  it('runs away from a cursor that dashes at it', () => {
+  it('is not startled when the cursor dashes onto it (reaching to pick it up)', () => {
     const world = new World({ displays: [display(1, 0)], windows: [], safeZones: [] });
     const pet = makePet('cat', world);
     run(pet, 0.5);
     const { x, y } = pet.center;
     for (let i = 0; i < 6; i++) {
       pet.cursor.feed({ x: x - 300 + i * 60, y });
+      pet.cursor.update(1 / 60);
+    }
+    pet.update(DT, { quiet: false, others: [] });
+    expect(pet.brain.history).not.toContain('react:startled');
+  });
+
+  it('runs away from a cursor that dashes at it', () => {
+    const world = new World({ displays: [display(1, 0)], windows: [], safeZones: [] });
+    const pet = makePet('cat', world);
+    run(pet, 0.5);
+    const { x, y } = pet.center;
+    for (let i = 0; i < 5; i++) {
+      pet.cursor.feed({ x: x - 330 + i * 60, y });
       pet.cursor.update(1 / 60);
     }
     pet.update(DT, { quiet: false, others: [] });

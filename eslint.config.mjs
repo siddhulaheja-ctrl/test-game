@@ -35,6 +35,7 @@ export default tseslint.config(
       'src/core/**/*.ts',
       'src/creature/**/*.ts',
       'src/behaviors/**/*.ts',
+      'src/world/**/*.ts',
       'src/life/**/*.ts',
       'src/ai/**/*.ts',
     ],

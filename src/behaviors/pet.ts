@@ -11,6 +11,9 @@ import { Brain, type BehaviorState } from './brain';
 import type { CursorSense } from './cursorSense';
 import { Fall, Held, OPTIONS, reflexes } from './library';
 import { Mover, type MoverEvent } from './mover';
+import type { PetSnapshot } from './snapshot';
+
+export type { PetSnapshot } from './snapshot';
 
 export const DEFAULT_MOVEMENT: Movement = {
   walkSpeed: 60,
@@ -27,21 +30,6 @@ export interface PetSurroundings {
   quiet: boolean;
   /** Feet positions of the other pets (to keep a little personal space). */
   others: Vec2[];
-}
-
-/** Enough to rebuild a pet on another display (multi-monitor hand-over). */
-export interface PetSnapshot {
-  id: string;
-  appearance: Appearance;
-  seed: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  contact: 'surface' | 'wall' | 'air' | 'held';
-  facing: -1 | 1;
-  /** Where a trip was heading, so the new owner can carry on. */
-  heading: Vec2 | null;
 }
 
 export interface PetOptions {

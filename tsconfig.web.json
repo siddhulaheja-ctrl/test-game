@@ -9,6 +9,7 @@
     "src/core/**/*.ts",
     "src/creature/**/*.ts",
     "src/behaviors/**/*.ts",
+    "src/world/**/*.ts",
     "src/senses/**/*.ts",
     "src/life/**/*.ts",
     "src/ai/**/*.ts",

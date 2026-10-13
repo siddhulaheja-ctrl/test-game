@@ -16,6 +16,15 @@ interface OverlayHooks {
   simulateCursor(x: number, y: number): void;
   petCenter(): { x: number; y: number };
   isInteractive(): boolean;
+  hold(seconds: number): void;
+  pets(): {
+    id: string;
+    state: string;
+    x: number;
+    y: number;
+    contact: string;
+    windowId: string | null;
+  }[];
 }
 
 let app: ElectronApplication;
@@ -77,6 +86,12 @@ test('overlay is a transparent, frameless, always-on-top window over the work ar
 
 test('clicks pass through except over the creature', async () => {
   expect(await hooks((h) => h.isInteractive())).toBe(false);
+  await overlay.waitForFunction(
+    () => (window as unknown as { __overlay: OverlayHooks }).__overlay.pets().length > 0,
+  );
+  await overlay.evaluate(() =>
+    (window as unknown as { __overlay: OverlayHooks }).__overlay.hold(30),
+  );
   const c = await overlay.evaluate(() =>
     (window as unknown as { __overlay: OverlayHooks }).__overlay.petCenter(),
   );

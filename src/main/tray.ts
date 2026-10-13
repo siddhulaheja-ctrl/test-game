@@ -1,5 +1,5 @@
 import { Menu, Tray, nativeImage, type MenuItemConstructorOptions } from 'electron';
-import type { AppState } from '../shared/ipc';
+import { CHARACTERS, type AppState, type CharacterId, type FullscreenMode } from '../shared/ipc';
 import { renderIconRGBA } from './appIcon';
 import { encodePng } from './png';
 
@@ -7,6 +7,9 @@ export interface TrayActions {
   toggleVisible(): void;
   setQuietMode(on: boolean): void;
   setDebugOverlay(on: boolean): void;
+  setCharacter(id: CharacterId, on: boolean): void;
+  setFullscreenMode(mode: FullscreenMode): void;
+  setAvoidNotificationCorner(on: boolean): void;
   openLab(): void;
   quit(): void;
 }
@@ -41,6 +44,44 @@ export function trayMenuTemplate(
       type: 'checkbox',
       checked: state.quietMode,
       click: (item) => actions.setQuietMode(item.checked),
+    },
+    {
+      id: 'characters',
+      label: 'Characters',
+      submenu: CHARACTERS.map((c) => ({
+        id: `character-${c.id}`,
+        label: c.name,
+        type: 'checkbox' as const,
+        checked: state.characters.includes(c.id),
+        click: (item: Electron.MenuItem) => actions.setCharacter(c.id, item.checked),
+      })),
+    },
+    {
+      id: 'fullscreen',
+      label: 'When a Fullscreen App Is Open',
+      submenu: [
+        {
+          id: 'fullscreen-hide',
+          label: 'Hide',
+          type: 'radio',
+          checked: state.fullscreenMode === 'hide',
+          click: () => actions.setFullscreenMode('hide'),
+        },
+        {
+          id: 'fullscreen-quiet',
+          label: 'Stay, but Go Quiet',
+          type: 'radio',
+          checked: state.fullscreenMode === 'quiet',
+          click: () => actions.setFullscreenMode('quiet'),
+        },
+      ],
+    },
+    {
+      id: 'notification-corner',
+      label: 'Keep Clear of Notification Corner',
+      type: 'checkbox',
+      checked: state.avoidNotificationCorner,
+      click: (item) => actions.setAvoidNotificationCorner(item.checked),
     },
     { type: 'separator' },
     {

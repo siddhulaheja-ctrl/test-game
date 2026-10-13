@@ -1,4 +1,5 @@
-import { BrowserWindow, screen, type Display } from 'electron';
+import { BrowserWindow } from 'electron';
+import type { DisplayInfo } from '../world/world';
 import { pageLocation, preloadPath } from './paths';
 
 /**
@@ -10,7 +11,7 @@ export class OverlayWindow {
   readonly win: BrowserWindow;
   private interactive = false;
 
-  constructor(private display: Display) {
+  constructor(private display: DisplayInfo) {
     const { x, y, width, height } = display.workArea;
     this.win = new BrowserWindow({
       x,
@@ -68,12 +69,25 @@ export class OverlayWindow {
     else this.win.setIgnoreMouseEvents(true, { forward: true });
   }
 
+  get info(): DisplayInfo {
+    return this.display;
+  }
+
   /** Re-fit to the display's work area (taskbar moved, resolution changed, DPI changed). */
-  refit(): void {
-    const updated = screen.getAllDisplays().find((d) => d.id === this.display.id);
-    if (!updated || this.win.isDestroyed()) return;
-    this.display = updated;
-    this.win.setBounds(updated.workArea);
+  refit(display: DisplayInfo): void {
+    if (this.win.isDestroyed()) return;
+    this.display = display;
+    this.win.setBounds(display.workArea);
+  }
+
+  /** Native handle as a hex id (matches WindowProvider ids), to keep overlays out of window lists. */
+  nativeId(): string {
+    const h = this.win.getNativeWindowHandle();
+    return h.length >= 8 ? h.readBigUInt64LE(0).toString(16) : h.readUInt32LE(0).toString(16);
+  }
+
+  destroy(): void {
+    if (!this.win.isDestroyed()) this.win.destroy();
   }
 
   show(): void {
@@ -84,12 +98,5 @@ export class OverlayWindow {
     if (this.win.isDestroyed()) return;
     this.setInteractive(false);
     this.win.hide();
-  }
-
-  /** Cursor position relative to this window, in DIP. */
-  cursorInWindow(): { x: number; y: number } {
-    const p = screen.getCursorScreenPoint();
-    const b = this.win.getBounds();
-    return { x: p.x - b.x, y: p.y - b.y };
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizeAppearance } from './appearance';
 import { contrast } from './color';
 import { listSpecies } from './species';
+import { CHARACTERS } from '../shared/ipc';
 
 describe('character catalog', () => {
   it('has at least one character, and palette ids match their keys', () => {
@@ -35,6 +36,13 @@ describe('character catalog', () => {
       expect(contrast(p.colors.eye!, p.colors.fur!)).toBeGreaterThan(4.5);
       expect(contrast(p.colors.whisker!, p.colors.fur!)).toBeGreaterThan(3);
     }
+  });
+});
+
+describe('characters offered in the tray', () => {
+  it('match the registered characters', () => {
+    const ids = listSpecies().map((s) => s.id);
+    for (const c of CHARACTERS) expect(ids).toContain(c.id);
   });
 });
 

@@ -773,8 +773,10 @@ export function reflexes(pet: Pet): void {
   if (!c.pos) return;
   const dist = c.distanceTo(pet.center.x, pet.center.y);
 
-  // A fast cursor nearby: startle, then run (or just flinch in Quiet Mode).
-  if (c.burst > 1700 && dist < 230 * pet.size + 60 && !pet.cooling('flee')) {
+  // A fast cursor nearby: startle, then run (or just flinch in Quiet Mode). Not when it lands on
+  // the pet: that's someone reaching to pick it up.
+  const onPet = pet.creature.hitShape().distanceOutside(c.pos.x, c.pos.y) < 12;
+  if (c.burst > 1700 && dist < 230 * pet.size + 60 && !onPet && !pet.cooling('flee')) {
     pet.cool('flee', 6);
     if (pet.quiet) {
       pet.brain.interrupt(pet, new React('startled'));
