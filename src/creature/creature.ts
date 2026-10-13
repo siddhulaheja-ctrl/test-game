@@ -321,6 +321,7 @@ export class Creature {
       if (this.lift <= 0) this.land(-this.liftV);
     }
 
+    this.species.update?.(this, dt);
     this.stretch.step(dt);
     this.ring.step(dt);
     this.faceLag.step(dt);
@@ -412,6 +413,11 @@ export class Creature {
     const R = this.R;
     const L = this.anim.layer;
     let face = this.mixer.face();
+    const bias = this.species.faceBias;
+    if (bias) {
+      face = { ...face };
+      for (const k of Object.keys(bias) as (keyof FaceParams)[]) face[k] += bias[k] ?? 0;
+    }
     if (this.manualFace) face = { ...face, ...this.manualFace };
     face = clampFace({
       ...face,

@@ -1,5 +1,6 @@
 import type { AccessoryId, BodyShape, BodyShapeId, EyeStyleId, Palette } from '../appearance';
 import type { Creature, CreaturePose } from '../creature';
+import type { FaceParams } from '../face';
 
 /**
  * A dangly chain attached to the body outline (antennae, gills, flame tongues, a robot aerial).
@@ -66,6 +67,10 @@ export interface SpeciesDef {
   hover?: number;
   /** Ground shadow width multiplier. */
   shadowScale?: number;
+  /** Added to the blended face every frame (e.g. the axolotl's permanently wide smile). */
+  faceBias?: Partial<FaceParams>;
+  /** Per-species simulation extras (flicker, blinking lights, spawning sparks). */
+  update?(creature: Creature, dt: number): void;
   /**
    * Draw everything except the ground shadow and particles, in world space.
    * Use `creature.toWorld` / the pose transform helpers in `render/parts.ts`.

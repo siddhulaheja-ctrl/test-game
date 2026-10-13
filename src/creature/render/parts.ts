@@ -339,3 +339,40 @@ export function glow(
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
 }
+
+/**
+ * Closed path of a ribbon along `pts` whose half-width goes from `w0` at the start to `w1` at the
+ * end (gills, flame tongues, tails).
+ */
+export function taperedPath(
+  ctx: CanvasRenderingContext2D,
+  pts: readonly Vec2[],
+  w0: number,
+  w1: number,
+): void {
+  const n = pts.length;
+  const left: Vec2[] = [];
+  const right: Vec2[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)]!;
+    const b = pts[Math.min(n - 1, i + 1)]!;
+    const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = -(b.y - a.y) / d;
+    const ny = (b.x - a.x) / d;
+    const w = w0 + (w1 - w0) * (i / Math.max(1, n - 1));
+    left.push({ x: pts[i]!.x + nx * w, y: pts[i]!.y + ny * w });
+    right.push({ x: pts[i]!.x - nx * w, y: pts[i]!.y - ny * w });
+  }
+  ctx.beginPath();
+  openSpline(ctx, left);
+  const end = pts[n - 1]!;
+  ctx.quadraticCurveTo(
+    end.x + (end.x - pts[Math.max(0, n - 2)]!.x) * 0.6,
+    end.y + (end.y - pts[Math.max(0, n - 2)]!.y) * 0.6,
+    right[n - 1]!.x,
+    right[n - 1]!.y,
+  );
+  const rev = [...right].reverse();
+  for (let i = 1; i < rev.length; i++) ctx.lineTo(rev[i]!.x, rev[i]!.y);
+  ctx.closePath();
+}

@@ -9,6 +9,7 @@ export const PARTICLE_KINDS = [
   'dust',
   'exclaim',
   'question',
+  'butterfly',
 ] as const;
 export type ParticleKind = (typeof PARTICLE_KINDS)[number];
 
@@ -123,6 +124,16 @@ export const PARTICLE_SPECS: Record<ParticleKind, KindSpec> = {
     gravity: 80,
     drag: 0.1,
     size: [0.3, 0.3],
+    spin: [0, 0],
+  },
+  butterfly: {
+    life: [2.6, 3.4],
+    speed: [25, 45],
+    dir: UP,
+    spread: 1.4,
+    gravity: -12,
+    drag: 0.5,
+    size: [0.18, 0.24],
     spin: [0, 0],
   },
 };

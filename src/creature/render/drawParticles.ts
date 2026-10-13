@@ -136,6 +136,47 @@ function drawOne(ctx: CanvasRenderingContext2D, p: Particle, pal: Palette): void
       ctx.fill();
       break;
     }
+    case 'butterfly': {
+      // Fluttering wings, wandering drift.
+      ctx.translate(Math.sin(p.age * 2.3 + p.seed * 9) * s * 0.9, 0);
+      ctx.rotate(Math.sin(p.age * 1.7 + p.seed * 4) * 0.35);
+      const flap = 0.25 + 0.75 * Math.abs(Math.sin(p.age * 15 + p.seed * 20));
+      const wing = p.seed > 0.5 ? pal.accent : mix(pal.cheek, '#b58bff', 0.5);
+      const edge = mix(wing, '#2a1f3d', 0.6);
+      ctx.lineWidth = outlineW * 0.5;
+      ctx.strokeStyle = edge;
+      for (const side of [-1, 1]) {
+        ctx.save();
+        ctx.scale(side * flap, 1);
+        ctx.beginPath();
+        ctx.ellipse(s * 0.32, -s * 0.18, s * 0.34, s * 0.26, -0.5, 0, Math.PI * 2);
+        ctx.fillStyle = wing;
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(s * 0.24, s * 0.2, s * 0.2, s * 0.16, 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = mix(wing, '#ffffff', 0.35);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.beginPath();
+        ctx.arc(s * 0.36, -s * 0.22, s * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = edge;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.06, s * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = edge;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.28);
+      ctx.quadraticCurveTo(-s * 0.1, -s * 0.45, -s * 0.16, -s * 0.5);
+      ctx.moveTo(0, -s * 0.28);
+      ctx.quadraticCurveTo(s * 0.1, -s * 0.45, s * 0.16, -s * 0.5);
+      ctx.stroke();
+      break;
+    }
     case 'exclaim':
     case 'question': {
       const pop = Math.min(1, p.age / 0.12);
