@@ -34,15 +34,36 @@
 - The overlay shows the character; click it to poke it. Quiet Mode dims it, calms fidgets and turns off particles.
 - **History:** the first character, Glorp (a jelly blob), was removed at the owner's request, and the app was renamed **Desktop Buddy**.
 
+## Stage 2: Movement and screen interaction ✅
+
+![Stage 2 in the playground](docs/images/stage2-scenes.png)
+
+- **The desktop as a world** (`src/world/`): each display's floor, the visible parts of window title bars (cut where other windows cover them), climbable window sides, and safe zones. A route planner links surfaces by walking, jumping, dropping off edges and climbing.
+- **Movement** (`src/behaviors/mover.ts`): walking along surfaces, ballistic jumps, falls with squash on landing, clinging to and climbing window sides, riding a window while it is dragged, falling when it closes, minimises or gets covered, and bouncing off the edges of the desktop.
+- **Behaviour state machine** (`src/behaviors/`): idle, walk, sit, sleep, climb, fall, jump, peek, hide, play, react and held. The next behaviour is picked by weighted chance when one finishes; reflexes cut in when the ground goes, the pet is grabbed, or the cursor dashes past.
+- **Cursor play:** curious when it comes close slowly (a "?" and a look), follows it at a polite distance, pounces at it when it hovers near, gets startled and runs away from a fast dash (never when you're reaching to grab it), and goes to sleep under a cursor that has been still for a while.
+- **Drag and throw:** press and drag a pet to pick it up; it dangles from the cursor and swings like a pendulum, gets nervous if shaken, and flies off with your throw when you let go. A hard landing leaves it dizzy.
+- **Both characters move in their own way.** The cat is quick and springy: it gets up off its haunches and trots on four legs, grips window edges with both paws, and hangs limp with its tail down when carried. PEKKA is slow and heavy, with alternating stomping feet, swinging swords and short jumps.
+- **Both characters at once:** the tray's Characters menu turns each one on or off (both are on by default). They keep a little personal space.
+- **Multiple monitors:** one overlay per display. Pets walk, fall or get thrown from one display to the next and are handed over between overlays, even mid-drag.
+- **Windows window access** (`src/platform/win32/`): visible window rectangles and z-order through Win32 (via `koffi`), polled 4 times a second and 30 times a second for a window a pet is standing on. Titles and contents are never read. macOS and Linux have no window provider yet, so pets stay on the floors there.
+- **Fullscreen apps and games:** the overlay on that display hides (or, if chosen in the tray, stays and goes quiet).
+- **Safe zones:** pets never rest in the notification corner (on by default, toggled in the tray) or in custom zones from the settings file. The overlay covers only the work area, so the taskbar and its clock are never covered.
+- **Quiet Mode** keeps pets on the ground: no climbing, jumping, running, pouncing, peeking or hiding, and more sitting and sleeping.
+- **Playground** (`npm run playground`): a simulated desktop with two monitors at different heights, draggable fake windows, a safe zone and both characters, with each pet's state shown above it. It's where Stage 2 was built and checked.
+- **Tests:** unit tests for the world, route planner, mover, brain and behaviours, including 12 simulated minutes on a desktop whose windows keep moving, closing and opening; playground tests for riding, closing, climbing, drag and throw and a 10-minute wander; screenshot tests for the walk, climb, carried and sleep poses of both characters; and Electron tests with two fake displays for riding, falling, hand-over between displays, fullscreen hiding, the Characters menu and drag and throw.
+
 ## Next
 
-- Next character: chosen by the owner.
-- Characters can't yet be picked outside the lab (a settings UI comes with later stages).
-- Stage 2: movement and screen interaction (behaviour state machine, walking, jumping, `WindowProvider` for Windows, cursor play, dragging and throwing, multiple monitors, fullscreen detection).
+- Stage 3: Awareness (senses): system state, input activity rates, the focused app, and a privacy panel to see and toggle everything it observes.
+- More characters when the owner names them.
 
 ## Known issues
 
 - On Linux, `setIgnoreMouseEvents(..., { forward: true })` does not forward mouse moves, so hover detection relies on main's 30 Hz cursor polling. Windows and macOS get both.
 - Under X11 with no window manager (CI), the overlay comes out 1px smaller than the work area. The test allows for it.
 - Performance is not measured on Windows yet. In the Linux dev container (Xvfb, software GL) the debug overlay showed about 11% CPU and 556 MB summed across all Electron processes, far above the budget (under 3% idle CPU, 150 MB RAM). Those numbers include software rendering and aren't representative, but the budget is unproven until it's measured on real Windows hardware. Stage 9 covers profiling and cuts (lighter idle loop, GPU flags, process count).
+- **The Win32 window provider has not run on a real Windows machine yet** (this environment is Linux). Its filtering logic is unit-tested and the rest of Stage 2 is tested with fake windows, but the first run on Windows may need fixes to which windows count (for example, apps with unusual window styles).
+- On macOS and Linux there is no window provider yet, so pets only use the floors.
+- While a pet is dragged onto another display, that display follows the cursor at main's 30 Hz poll rate, so the drag looks a little less smooth there.
 - Screenshot baselines are kept per platform (`e2e/__screenshots__/<platform>/`). Only Linux baselines are committed, so on Windows run `npm run test:e2e:update` once to record local ones.
