@@ -111,3 +111,27 @@ This log records why each choice was made. The newest entries go at the bottom o
 - **The paws keep the cat a cat:** generic "arm raise" lifts them to the chest only when the mood says so; during the wave fidget only the right paw beckons, and yawns don't lift them.
 - **Happy face chosen by the owner** from five options (crescent eyes, closed "^^", slow blink, bright and sparkly, wink): eyes shut in "^^" arcs with an open smile and no blush. It's applied as a cat-only blend toward that face by the happy weight, so the shared expression stays the same for other characters.
 - **Eyelids use the head's fur shading** (the same gradient, offset by the face shift) so half-closed eyes don't show darker discs.
+
+## Stage 2: movement and screen interaction
+
+### Layers
+
+```
+main:     DisplaySource ─┐   WindowProvider (win32 via koffi │ fake │ none)   cursor + button poll
+                         ▼                     ▼                               ▼
+          OverlayManager: one overlay per display, relays hand-overs ── IPC: world, cursor, handoff
+renderer: World (pure: surfaces, walls, safe zones) ─▶ Pet = Creature + Mover + Brain ─▶ draw
+```
+
+- **Everything that decides movement is pure and runs in the renderer**: `src/world/` (geometry, surfaces, walls, route planning) and `src/behaviors/` (mover physics, cursor sense, brain and behaviour modules). Unit tests drive them with fake desktops; a browser **playground** page runs the whole thing on a simulated desktop with draggable fake windows and two fake monitors, so behaviour can be watched and screenshot-tested without Windows.
+- **Global coordinates.** The world uses virtual-desktop DIP coordinates. Each overlay draws with a translate by its own origin.
+- **Surfaces** are horizontal walkable segments: each display's work-area floor and the visible parts of window tops (clipped by windows above them in z-order, by screen bounds and by safe zones). **Walls** are the visible parts of window sides (climbable) plus the outer edges of the desktop (bounce, never walk into the void).
+- **Riding windows.** A pet standing on a window remembers its offset from the window's left edge. When the window moves, the pet moves with it; when the window closes, is minimised or is covered at that spot, the pet falls. Main polls the window under a pet at 30 Hz and the full list at about 4 Hz, and only sends changes.
+- **Route planning** is a breadth-first search over surfaces linked by jumps (within the species' jump envelope), drops (walking off an edge onto something below) and climbs (up a window side to its top). The desktop has at most a few dozen surfaces, so this is cheap and is re-run when the world changes.
+- **Brain:** one active behaviour at a time (`idle`, `walk`, `sit`, `sleep`, `climb`, `fall`, `jump`, `peek`, `hide`, `play`, `react`, `held`). Behaviours return when they finish; the brain then picks the next by weighted, condition-gated choice. Interrupts (grabbed, ground lost, cursor dashing nearby, poked) pre-empt the current behaviour. Quiet Mode removes climbing, jumping and running and favours sitting and sleeping.
+- **Per-species movement** (`SpeciesDef.movement`): walk/run speed, jump height, climbing speed and step rate. The cat is quick and springy; PEKKA is slower and heavier.
+- **Multiple characters at once.** The tray has a Characters submenu; each enabled character is its own pet with its own brain.
+- **Multi-monitor:** one overlay per display. A pet belongs to one overlay at a time; when its feet cross into another display the owner sends a hand-over snapshot (position, velocity, contact, behaviour, mood) through main and stops drawing it. While being dragged the drag continues across displays: main supplies the global cursor (and on Windows the left-button state), and a mouse-up in whichever overlay captured the press is relayed to the owner.
+- **Fullscreen apps:** main detects them (Windows: `SHQueryUserNotificationState` plus a foreground window covering a whole display that isn't the desktop shell). Default is to hide the overlay on that display; the tray offers "go quiet" instead.
+- **Safe zones:** pets never stand or walk inside a safe zone. By default the notification corner (bottom-right of the primary display, where Windows toasts appear) is one; the tray toggles it, and custom zones live in settings until the Stage 8 settings UI.
+- **`koffi` for Win32 calls** (`EnumWindows`, `DwmGetWindowAttribute`, `GetAsyncKeyState`, …). It ships prebuilt binaries for every platform, so unlike `ffi-napi` or a custom addon it needs no compiler or Electron rebuild. Window titles are never read: only rectangles, z-order, visibility and class names (to skip the desktop shell and tool windows).
