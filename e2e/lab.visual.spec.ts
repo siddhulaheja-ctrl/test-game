@@ -31,6 +31,7 @@ async function show(page: Page, opts: ShowOpts, actions: string[] = [], step = 0
 
 const stage = (page: Page) => page.locator('#stage-wrap');
 const PEKKA = { species: 'pekka', palette: 'steel' };
+const CAT = { species: 'cat', palette: 'midnight' };
 
 test.beforeEach(async ({ page }) => open(page));
 
@@ -88,6 +89,33 @@ test('pekka animations and particles', async ({ page }) => {
     1.6,
   );
   await expect(stage(page)).toHaveScreenshot('pekka-particles-zzz.png');
+});
+
+for (const expression of EXPRESSIONS) {
+  test(`cat expression: ${expression}`, async ({ page }) => {
+    await show(page, { appearance: CAT, expression });
+    await expect(stage(page)).toHaveScreenshot(`cat-expr-${expression}.png`);
+  });
+}
+
+test('cat palettes', async ({ page }) => {
+  for (const palette of ['midnight', 'emerald', 'copper', 'oddEyes', 'smoke']) {
+    await show(page, { appearance: { species: 'cat', palette } });
+    await expect(stage(page)).toHaveScreenshot(`cat-palette-${palette}.png`);
+  }
+});
+
+test('cat animations', async ({ page }) => {
+  await show(page, { appearance: CAT, expression: 'sleepy' }, ['c.yawn()'], 1.3);
+  await expect(stage(page)).toHaveScreenshot('cat-anim-yawn.png');
+  await show(page, { appearance: CAT, expression: 'neutral' }, ["c.fidget('blep')"], 0.7);
+  await expect(stage(page)).toHaveScreenshot('cat-anim-blep.png');
+  await show(page, { appearance: CAT, expression: 'happy' }, ["c.fidget('wave')"], 0.6);
+  await expect(stage(page)).toHaveScreenshot('cat-anim-beckon.png');
+  await show(page, { appearance: CAT, expression: 'happy', face: { eyeOpen: 0 } });
+  await expect(stage(page)).toHaveScreenshot('cat-anim-happy-closed.png');
+  await show(page, { appearance: CAT, expression: 'happy' }, ['c.hop(1)'], 0.28);
+  await expect(stage(page)).toHaveScreenshot('cat-anim-hop-air.png');
 });
 
 test('rendering is crisp: the canvas backing store matches the device pixel ratio', async ({

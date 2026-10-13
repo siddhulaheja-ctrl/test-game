@@ -21,6 +21,15 @@
   - particles: sparkles, hearts, sweat, zzz, music notes, dust, "!", "?" and butterflies
 - **Character system** (`src/creature/species/`): each character supplies its envelope, palettes (generic colour roles), stiffness, resting face bias and renderer. The lab has a character picker.
 - **P.E.K.K.A (fan version)**, replicating the owner's reference art: rounded helmet with triangular eye sockets and ringed eyes, crescent horns, faceted chest plate with a gem plaque, spiked shoulder spheres, twin striped swords, far-apart disc feet. Five palettes: Reference Steel, Classic Violet, Arena Blue, Arena Red, Max Level Amber. Expressions show through the eye sockets (slant, size, squint, blink), a blush under the sockets, eye glints when excited, and the swords (raised when excited or surprised, sagging when sad or sleepy). Blink, yawn, fidgets, hop and poke all work. Screenshot tests cover all nine expressions, every palette, animations and particles at 1x and 2x.
+- **Black Cat**, after the owner's reference: a clean black silhouette with big round yellow eyes, pointed ears and a tail that curls up beside it. Detailed expressions read from the shared face values:
+  - eyes: pupils from thin slits (annoyed) to big round ones (excited, scared, pleading sad eyes), slanted upper lids, happy crescent lower lids, iris fibres, catchlights, tears when sad, sparkles when excited; closed eyes as "^" (happy) or a lashed "u" (asleep)
+  - ears perk, droop sideways when sad, go "airplane" when annoyed, pin flat when scared, one swivels when curious, and they twitch on their own
+  - eyebrow whiskers and muzzle whiskers move with the mood (fanned when happy, drooping when sad, pulled back and trembling when scared)
+  - `:3` mouth that frowns or wobbles, opens with fangs (a hiss when scared), yawns with a curled tongue, and bleps
+  - tail is a physics chain: curled up when content, low when sad or sleepy, shoots up and bottle-brushes when scared, lashes when annoyed, quivers when excited; the body fur bristles when scared
+  - front paws lift to "bunny paws" with toe beans when surprised or excited, and the wave fidget becomes a lucky-cat beckon
+  - five palettes: Midnight (reference), Emerald Eyes, Copper Eyes, Odd Eyes, Smoke
+  - screenshot tests cover all nine expressions, every palette, and yawn, blep, beckon, closed happy eyes and hop at 1x and 2x
 - **Creature lab** (`npm run lab`, or "Creature Lab…" in the tray): character and palette pickers, expression buttons and blend sliders, manual face sliders, buttons for every animation, fidget, look direction and particle, background, zoom, slow motion, pause and step. Settings survive hot reloads.
 - The overlay shows the character; click it to poke it. Quiet Mode dims it, calms fidgets and turns off particles.
 - **History:** the first character, Glorp (a jelly blob), was removed at the owner's request, and the app was renamed **Desktop Buddy**.
@@ -28,6 +37,7 @@
 ## Next
 
 - Next character: chosen by the owner.
+- Characters can't yet be picked outside the lab (a settings UI comes with later stages).
 - Stage 2: movement and screen interaction (behaviour state machine, walking, jumping, `WindowProvider` for Windows, cursor play, dragging and throwing, multiple monitors, fullscreen detection).
 
 ## Known issues

@@ -19,6 +19,8 @@ export interface DanglyDef {
   droopCurl: number;
   /** Constant droop added to the face's droop. */
   droopBias?: number;
+  /** Droop from the face (defaults to `face.droop`), e.g. a tail that rises when frightened. */
+  droopFor?(face: FaceParams): number;
   segments: number;
   /** Segment length in units of body radius. */
   segLen: number;

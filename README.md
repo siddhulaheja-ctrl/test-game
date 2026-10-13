@@ -2,7 +2,15 @@
 
 A living desktop companion. Characters are drawn entirely in code and live on top of your desktop in a transparent window. Clicks pass straight through everywhere except on the character itself.
 
-The first character is a fan version of **P.E.K.K.A** from Supercell's Clash games:
+There are two characters so far. A small **black cat** with big yellow eyes:
+
+![The black cat drawn in code](docs/images/cat.png)
+
+Its expressions are cat body language: pupils go to slits or dilate, eyelids slant, ears perk up, swivel or flatten, whiskers fan out or pull back, the `:3` mouth opens to show fangs, and the tail curls, droops, lashes or puffs up:
+
+![The cat's expressions](docs/images/cat-expressions.png)
+
+And a fan version of **P.E.K.K.A** from Supercell's Clash games:
 
 ![P.E.K.K.A drawn in code](docs/images/pekka.png)
 

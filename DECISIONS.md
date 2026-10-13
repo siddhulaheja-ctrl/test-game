@@ -101,3 +101,11 @@ This log records why each choice was made. The newest entries go at the bottom o
 - **Swords, horns and spikes share one `blade` colour** so they always match the armour's accent.
 - **Stern resting look** via `faceBias: { lidTilt: 0.35 }`; the eye sockets' top edge follows `lidTilt`, so the same expressions work for her.
 - **The Supercell logo on the reference chest is replaced by a plain gem plaque.** P.E.K.K.A is © Supercell; this is non-commercial fan art (Supercell's Fan Content Policy).
+
+### Black Cat
+
+- **Follows the owner's reference:** a plain black silhouette (outlines are drawn for every part first, then every part is filled, so lines only show around the outside), big round yellow eyes, pointed ears, a tail curling up on the right. A soft sheen and rim light keep the black from reading as a flat hole.
+- **Expressions are derived, not new parameters.** The renderer reads the shared 16 face values and derives cat moods from them (fright, anger, joy, sorrow, pupil dilation), so every existing expression, blend and reaction works without changes to the engine. For example, scared = wobbly mouth with worried brows, which the cat shows as dilated pupils, pinned ears, a hiss and bristling fur.
+- **One small engine addition:** a dangly chain can supply `droopFor(face)`, so the cat's tail rises when frightened while other droop still lowers it.
+- **Per-cat extras live in the species `update` hook** (ear twitches, whisker twitches, tail lashing when annoyed, quivering when excited), with their own seeded RNG and only while idle animation is on, so screenshot tests stay deterministic.
+- **The paws keep the cat a cat:** generic "arm raise" lifts them to the chest only when the mood says so; during the wave fidget only the right paw beckons, and yawns don't lift them.

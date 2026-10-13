@@ -341,7 +341,7 @@ export class Creature {
     const R = p.R;
     const local = restPoint(this.shape, d.rootAngle);
     const root = this.toWorld(local.x * R * d.rootInset, p.center.y + local.y * R * d.rootInset);
-    const droop = clamp(p.face.droop + (d.droopBias ?? 0), 0, 1.1);
+    const droop = clamp((d.droopFor?.(p.face) ?? p.face.droop) + (d.droopBias ?? 0), 0, 1.1);
     const pts: Vec2[] = [root];
     let a = d.restAngle + p.angle;
     let cur = root;

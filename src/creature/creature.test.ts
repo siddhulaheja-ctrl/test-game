@@ -87,4 +87,17 @@ describe('Creature', () => {
     expect(busy).toBeGreaterThan(c.activity());
     expect(c.activity()).toBeLessThan(0.05);
   });
+
+  it("the cat's tail droops when sad and shoots up when scared", () => {
+    const c = new Creature({ seed: 2, x: 100, y: 300, appearance: { species: 'cat' } });
+    c.anim.enabled = false;
+    const tipY = (mood: 'sad' | 'scared') => {
+      c.setMood({ [mood]: 1 });
+      c.settle();
+      step(c, 2);
+      return c.chains[0]!.points.at(-1)!.y;
+    };
+    // Smaller y is higher on screen.
+    expect(tipY('scared')).toBeLessThan(tipY('sad') - 20);
+  });
 });

@@ -27,6 +27,15 @@ describe('character catalog', () => {
       expect(contrast(p.outline, p.colors.steelLight!)).toBeGreaterThan(3);
     }
   });
+
+  it('the cat keeps the reference look: black fur, and eyes that pop against it', () => {
+    const cat = listSpecies().find((s) => s.id === 'cat')!;
+    expect(cat.palettes[cat.defaultPalette]!.colors.eye).toBe('#ffe42e');
+    for (const p of Object.values(cat.palettes)) {
+      expect(contrast(p.colors.eye!, p.colors.fur!)).toBeGreaterThan(4.5);
+      expect(contrast(p.colors.whisker!, p.colors.fur!)).toBeGreaterThan(3);
+    }
+  });
 });
 
 describe('normalizeAppearance', () => {
