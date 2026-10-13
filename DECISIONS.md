@@ -109,3 +109,5 @@ This log records why each choice was made. The newest entries go at the bottom o
 - **One small engine addition:** a dangly chain can supply `droopFor(face)`, so the cat's tail rises when frightened while other droop still lowers it.
 - **Per-cat extras live in the species `update` hook** (ear twitches, whisker twitches, tail lashing when annoyed, quivering when excited), with their own seeded RNG and only while idle animation is on, so screenshot tests stay deterministic.
 - **The paws keep the cat a cat:** generic "arm raise" lifts them to the chest only when the mood says so; during the wave fidget only the right paw beckons, and yawns don't lift them.
+- **Happy face chosen by the owner** from five options (crescent eyes, closed "^^", slow blink, bright and sparkly, wink): eyes shut in "^^" arcs with an open smile and no blush. It's applied as a cat-only blend toward that face by the happy weight, so the shared expression stays the same for other characters.
+- **Eyelids use the head's fur shading** (the same gradient, offset by the face shift) so half-closed eyes don't show darker discs.

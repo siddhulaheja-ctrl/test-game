@@ -295,8 +295,9 @@ export const CAT: SpeciesDef = {
   softness: 0.75,
   shadowScale: 0.85,
   update,
-  draw(ctx, c, pose) {
+  draw(ctx, c, basePose) {
     const k = kit(c.palette);
+    const pose = { ...basePose, face: catFace(basePose.face, c.mixer.weights().happy) };
     const f = pose.face;
     const m = moods(f);
     const s = stateOf(c);
@@ -315,6 +316,20 @@ export const CAT: SpeciesDef = {
     });
   },
 };
+
+/**
+ * The cat's own take on "happy" (the owner's pick): eyes shut in "^^" arcs and an open smile,
+ * without the blush. Blended by the happy weight so transitions stay smooth.
+ */
+function catFace(f: FaceParams, happy: number): FaceParams {
+  if (happy <= 0) return f;
+  const target: Partial<FaceParams> = { eyeOpen: 0, eyeSquint: 0.8, mouthOpen: 0.4, blush: 0 };
+  const out = { ...f };
+  for (const key of Object.keys(target) as (keyof FaceParams)[]) {
+    out[key] = lerp(f[key], target[key]!, happy);
+  }
+  return out;
+}
 
 // --- Paths ---------------------------------------------------------------------------------------
 
@@ -533,10 +548,7 @@ function drawSilhouette(
     ctx.restore();
   });
 
-  const headFill = ctx.createRadialGradient(-24, -176, 4, -10, -150, 92);
-  headFill.addColorStop(0, k.sheen);
-  headFill.addColorStop(1, k.fur);
-  ctx.fillStyle = headFill;
+  ctx.fillStyle = headGradient(ctx, k);
   headPath(ctx);
   ctx.fill();
 
@@ -586,6 +598,14 @@ function drawLegHints(ctx: CanvasRenderingContext2D, k: Kit, lifted: [number, nu
   }
   ctx.stroke();
   ctx.restore();
+}
+
+/** The head's fur shading; eyelids reuse it (offset by the face shift) so they blend in. */
+function headGradient(ctx: CanvasRenderingContext2D, k: Kit, dx = 0, dy = 0): CanvasGradient {
+  const g = ctx.createRadialGradient(-24 + dx, -176 + dy, 4, -10 + dx, -150 + dy, 92);
+  g.addColorStop(0, k.sheen);
+  g.addColorStop(1, k.fur);
+  return g;
 }
 
 // --- Front legs and paws -------------------------------------------------------------------------
@@ -795,6 +815,7 @@ function drawFace(
   const f = pose.face;
   ctx.save();
   ctx.translate(shift.x, shift.y);
+  const lidFill = headGradient(ctx, k, -shift.x, -shift.y);
 
   // Blush first so the eyes and whiskers sit on top of it.
   const blush = clamp((f.blush - 0.45) * 2, 0, 0.8);
@@ -805,7 +826,7 @@ function drawFace(
   for (const side of [-1, 1] as const) {
     const colors = k.eyes[side < 0 ? 0 : 1];
     const cy = EYE_Y - (side > 0 ? f.browAsym * 4 : 0);
-    drawEye(ctx, k, colors, side * EYE_X, cy, side, f, m, pose.look);
+    drawEye(ctx, k, colors, side * EYE_X, cy, side, f, m, pose.look, lidFill);
     drawBrowWhiskers(ctx, k, side * EYE_X, cy, side, f);
   }
   drawMuzzle(ctx, k, pose, m, whiskerTwitch);
@@ -822,6 +843,7 @@ function drawEye(
   f: FaceParams,
   m: Moods,
   look: Vec2,
+  lidFill: CanvasGradient,
 ): void {
   const open = f.eyeOpen;
   const r = EYE_R * (1 + Math.max(0, open - 1) * 0.45) * (1 + m.sorrow * 0.06);
@@ -932,7 +954,7 @@ function drawEye(
   ctx.lineTo(innerX - side * 4, innerY);
   ctx.lineTo(innerX - side * 4, cy - r - 6);
   ctx.closePath();
-  ctx.fillStyle = k.fur;
+  ctx.fillStyle = lidFill;
   ctx.fill();
 
   // Lower lid: rises into a happy crescent with eyeSquint.
