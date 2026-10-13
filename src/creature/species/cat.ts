@@ -321,7 +321,7 @@ export const CAT: SpeciesDef = {
       const ears: [number, number] = [twitch(s.ear[0], EAR_TWITCH), twitch(s.ear[1], EAR_TWITCH)];
       // Walking or dangling: the cat gets up off its haunches and its legs show.
       const stand = Math.min(1, pose.motion.walk);
-      const legsOut = Math.max(stand, pose.motion.held);
+      const legsOut = Math.max(stand, pose.motion.held, pose.motion.climb);
       if (legsOut > 0.02) drawHindLegs(ctx, k, pose, stand, legsOut);
       ctx.save();
       ctx.translate(0, -BODY_RISE * stand);
@@ -651,9 +651,19 @@ function drawHindLegs(
     const hip = { x: side * 40, y: -34 - BODY_RISE * stand };
     const walking = { x: side * 46 + M.facing * 6 * step * walk, y: -5 - 9 * lift };
     const hanging = { x: side * 38 + Math.sin(pose.time * 2.6 + side) * 2, y: 2 };
+    // Climbing: hind feet scrabble against the wall, taking turns.
+    const scrabble = {
+      x: M.climbSide * 34 + side * 12,
+      y: 2 - Math.max(0, Math.sin(pose.time * 9 + (side > 0 ? 0 : Math.PI))) * 14,
+    };
+    const hang = Math.max(M.held, M.climb);
+    const loose = {
+      x: lerp(hanging.x, scrabble.x, M.climb / Math.max(hang, 1e-6)),
+      y: lerp(hanging.y, scrabble.y, M.climb / Math.max(hang, 1e-6)),
+    };
     const foot = {
-      x: lerp(walking.x, hanging.x, M.held),
-      y: lerp(walking.y, hanging.y, M.held),
+      x: lerp(walking.x, loose.x, hang),
+      y: lerp(walking.y, loose.y, hang),
     };
     ctx.save();
     ctx.globalAlpha *= clamp(show * 4, 0, 1);
@@ -716,10 +726,9 @@ function drawFrontLegs(
       y: lerp(lerp(rest.y, up.y, raise), high.y, beckon),
     };
     // Clinging to a window side: both paws reach up beside the head and grip, taking turns.
-    const grip = {
-      x: M.climbSide * 62 + side * 9,
-      y: -122 - side * M.climbSide * 16 + Math.sin(pose.time * 9 + (side > 0 ? Math.PI : 0)) * 6,
-    };
+    // One paw high, one lower, swapping as it pulls itself up.
+    const reach = Math.sin(pose.time * 9 + (side > 0 ? Math.PI : 0));
+    const grip = { x: M.climbSide * (60 + side * M.climbSide * 4), y: -128 - 22 * reach };
     paw.x = lerp(paw.x, grip.x, M.climb);
     paw.y = lerp(paw.y, grip.y, M.climb);
     const lifted = Math.max(raise * (1 - M.held), beckon, M.climb);

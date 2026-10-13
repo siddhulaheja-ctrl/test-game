@@ -118,6 +118,22 @@ test('cat animations', async ({ page }) => {
   await expect(stage(page)).toHaveScreenshot('cat-anim-hop-air.png');
 });
 
+for (const species of ['cat', 'pekka']) {
+  test(`${species} movement poses`, async ({ page }) => {
+    const appearance = { species };
+    const poses: [string, Record<string, unknown>, number][] = [
+      ['walk', { walk: 1, facing: 1 }, 0.18],
+      ['climb', { climb: 1, climbSide: -1 }, 0.1],
+      ['held', { held: 1, swing: 0.25 }, 0.3],
+      ['sleep', { sleep: 1, crouch: 0.8 }, 0.1],
+    ];
+    for (const [name, motion, step] of poses) {
+      await show(page, { appearance, expression: 'neutral', motion }, [], step);
+      await expect(stage(page)).toHaveScreenshot(`${species}-motion-${name}.png`);
+    }
+  });
+}
+
 test('rendering is crisp: the canvas backing store matches the device pixel ratio', async ({
   page,
 }) => {

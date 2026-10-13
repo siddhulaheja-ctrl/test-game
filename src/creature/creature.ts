@@ -460,7 +460,7 @@ export class Creature {
       L.sway * 0.09 +
       M.facing * walk * 0.07 +
       M.held * M.swing +
-      M.climb * M.climbSide * 0.1;
+      M.climb * M.climbSide * 0.2;
     const hoverAmt = this.species.hover ?? 0;
     const hover = hoverAmt > 0 ? R * hoverAmt * (1 + 0.14 * Math.sin(this.time * 2.1)) : 0;
     const center = { x: 0, y: -(this.shape.ryBottom + FEET_HEIGHT) * R };

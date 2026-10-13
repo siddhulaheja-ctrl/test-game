@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         overlay: resolve(root, 'overlay/index.html'),
         lab: resolve(root, 'lab/index.html'),
+        playground: resolve(root, 'playground/index.html'),
       },
     },
   },
