@@ -3,7 +3,7 @@ import type { Palette } from '../appearance';
 import { mix, rgba } from '../color';
 import type { Creature, CreaturePose } from '../creature';
 import { restPoint } from '../softBody';
-import { FACE_LAYOUT, eyeGeometry } from './drawFace';
+import { eyeGeometry } from './drawFace';
 import { openSpline } from './path';
 
 /** Left and right x of the outline at local height y (origin at body centre). */
@@ -41,7 +41,7 @@ export function drawAccessoriesLocal(
   if (creature.hasAccessory('glasses')) drawGlasses(ctx, creature, pose, outline);
   if (creature.hasAccessory('beanie')) drawBeanie(ctx, pose, pal, outline);
   if (creature.hasAccessory('crown')) drawCrown(ctx, pose, outline);
-  if (creature.hasAccessory('headphones')) drawHeadphones(ctx, pose, pal, outline);
+  if (creature.hasAccessory('headphones')) drawHeadphones(ctx, creature, pose, pal, outline);
   if (creature.hasAccessory('bow')) drawBow(ctx, creature, pose, pal);
 }
 
@@ -54,9 +54,9 @@ export function drawAccessoriesWorld(
   const pal = creature.palette;
   if (creature.hasAccessory('scarf')) drawScarfTail(ctx, creature, pose, pal);
   if (creature.hasAccessory('beanie')) drawPompom(ctx, creature, pose, pal);
-  if (creature.hasAccessory('flower')) {
-    const chain = creature.antennae[0];
-    drawDaisy(ctx, chain.points[chain.points.length - 1]!, pose.R, pal);
+  const flowerChain = creature.chains[0];
+  if (creature.hasAccessory('flower') && flowerChain) {
+    drawDaisy(ctx, flowerChain.points[flowerChain.points.length - 1]!, pose.R, pal);
   }
 }
 
@@ -252,12 +252,13 @@ function drawCrown(
 
 function drawHeadphones(
   ctx: CanvasRenderingContext2D,
+  creature: Creature,
   pose: CreaturePose,
   pal: Palette,
   outline: readonly Vec2[],
 ): void {
   const R = pose.R;
-  const y = FACE_LAYOUT.eyeY * R;
+  const y = creature.faceLayout.eyeY * R;
   const [l, r] = widthAt(outline, y);
   const top = topOf(outline);
   const cupX = Math.max(-l, r) + R * 0.02;
@@ -304,7 +305,7 @@ function drawGlasses(
 ): void {
   const R = pose.R;
   const frame = '#3d2b36';
-  const eyes = eyeGeometry(pose, creature.eyeStyle);
+  const eyes = eyeGeometry(pose, creature.eyeStyle, creature.faceLayout);
   const lens = eyes.map((e) => ({ x: e.x, y: e.y, r: Math.max(e.rx, e.ry, R * 0.17) * 1.18 }));
   for (const l of lens) {
     ctx.beginPath();

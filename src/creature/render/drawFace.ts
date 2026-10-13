@@ -2,15 +2,11 @@ import { clamp, clamp01, lerp } from '../../core/math';
 import type { EyeStyle, Palette } from '../appearance';
 import { mix, rgba } from '../color';
 import type { CreaturePose } from '../creature';
+import { DEFAULT_FACE_LAYOUT, type FaceLayout } from '../species/types';
 import { starPath } from './path';
 
-/** Face anchor points in local space (relative to body centre), units of body radius. */
-export const FACE_LAYOUT = {
-  eyeY: -0.04,
-  mouthY: 0.3,
-  cheekX: 0.6,
-  cheekY: 0.2,
-};
+/** Default face anchor points in local space (relative to body centre), units of body radius. */
+export const FACE_LAYOUT: FaceLayout = DEFAULT_FACE_LAYOUT;
 
 export interface EyeGeom {
   x: number;
@@ -21,14 +17,19 @@ export interface EyeGeom {
 }
 
 /** Eye centres and radii in local px (relative to the body centre, face shift applied). */
-export function eyeGeometry(pose: CreaturePose, style: EyeStyle): [EyeGeom, EyeGeom] {
-  const { R, faceShift } = pose;
+export function eyeGeometry(
+  pose: CreaturePose,
+  style: EyeStyle,
+  layout: FaceLayout = FACE_LAYOUT,
+): [EyeGeom, EyeGeom] {
+  const { faceShift } = pose;
+  const R = pose.R * layout.eyeScale;
   const make = (side: -1 | 1): EyeGeom => {
     const i = side < 0 ? 0 : 1;
     const size = style.sizes[i];
     return {
       x: side * style.spacing * R + faceShift.x,
-      y: (FACE_LAYOUT.eyeY + style.offsets[i]) * R + faceShift.y,
+      y: layout.eyeY * pose.R + style.offsets[i] * R + faceShift.y,
       rx: style.rx * R * size,
       ry: style.ry * R * size,
       side,
@@ -46,20 +47,26 @@ export function drawFace(
   pose: CreaturePose,
   palette: Palette,
   style: EyeStyle,
+  layout: FaceLayout = FACE_LAYOUT,
 ): void {
-  const eyes = eyeGeometry(pose, style);
-  drawCheeks(ctx, pose, palette);
+  const eyes = eyeGeometry(pose, style, layout);
+  drawCheeks(ctx, pose, palette, layout);
   for (const e of eyes) drawEye(ctx, e, pose, palette, style);
   for (const e of eyes) drawBrow(ctx, e, pose, palette);
-  drawMouth(ctx, pose, palette);
+  drawMouth(ctx, pose, palette, layout);
 }
 
-function drawCheeks(ctx: CanvasRenderingContext2D, pose: CreaturePose, pal: Palette): void {
+export function drawCheeks(
+  ctx: CanvasRenderingContext2D,
+  pose: CreaturePose,
+  pal: Palette,
+  layout: FaceLayout = FACE_LAYOUT,
+): void {
   const { R, face, faceShift } = pose;
   const a = 0.22 + face.blush * 0.5;
   for (const side of [-1, 1]) {
-    const x = side * FACE_LAYOUT.cheekX * R + faceShift.x * 0.8;
-    const y = FACE_LAYOUT.cheekY * R + faceShift.y * 0.8;
+    const x = side * layout.cheekX * R + faceShift.x * 0.8;
+    const y = layout.cheekY * R + faceShift.y * 0.8;
     const g = ctx.createRadialGradient(x, y, 0, x, y, R * 0.2);
     g.addColorStop(0, rgba(pal.cheek, a));
     g.addColorStop(0.55, rgba(pal.cheek, a * 0.7));
@@ -222,7 +229,7 @@ function drawEye(
   if (style.lashes && o > 0.3) drawLashes(ctx, cx, cy, rx, ry, e.side, pose, pal);
 }
 
-function drawHighlights(
+export function drawHighlights(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -340,10 +347,15 @@ function drawBrow(
   ctx.stroke();
 }
 
-function drawMouth(ctx: CanvasRenderingContext2D, pose: CreaturePose, pal: Palette): void {
+export function drawMouth(
+  ctx: CanvasRenderingContext2D,
+  pose: CreaturePose,
+  pal: Palette,
+  layout: FaceLayout = FACE_LAYOUT,
+): void {
   const { R, face, faceShift, mouthRound } = pose;
   const mx = faceShift.x * 0.9;
-  const my = FACE_LAYOUT.mouthY * R + faceShift.y * 0.9;
+  const my = layout.mouthY * R + faceShift.y * 0.9;
   const hw = R * 0.16 * face.mouthWidth;
   const sag = face.mouthCurve * R * 0.12;
   const open = clamp01(face.mouthOpen);

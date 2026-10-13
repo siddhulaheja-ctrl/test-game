@@ -41,7 +41,7 @@ describe('Creature', () => {
   it('antennae lag behind fast motion then settle back to rest', () => {
     const c = new Creature({ x: 100, y: 300 });
     c.anim.enabled = false;
-    const tip = () => ({ ...c.antennae[1].points.at(-1)! });
+    const tip = () => ({ ...c.chains[1]!.points.at(-1)! });
     step(c, 1);
     const rest = tip();
     c.x += 40;

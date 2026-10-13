@@ -1,3 +1,5 @@
+import { defaultSpeciesId, getSpecies, hasSpecies } from './species/registry';
+
 /**
  * Customisation data model: palettes, eye styles, body shapes and accessories.
  * Everything here is plain data so it can be saved, edited in the lab, and extended by plugins.
@@ -105,6 +107,7 @@ export const PALETTES = {
   },
 } as const satisfies Record<string, Palette>;
 
+/** Glorp's palette ids. Other species define their own palettes. */
 export type PaletteId = keyof typeof PALETTES;
 
 export interface EyeStyle {
@@ -258,7 +261,10 @@ export const ACCESSORIES = {
 export type AccessoryId = keyof typeof ACCESSORIES;
 
 export interface Appearance {
-  palette: PaletteId;
+  /** Which character (see `species/`). */
+  species: string;
+  /** Palette id within the species' palettes. */
+  palette: string;
   eyes: EyeStyleId;
   body: BodyShapeId;
   accessories: AccessoryId[];
@@ -267,6 +273,7 @@ export interface Appearance {
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
+  species: 'glorp',
   palette: 'mint',
   eyes: 'glossy',
   body: 'round',
@@ -289,20 +296,32 @@ export function withAccessory(list: readonly AccessoryId[], id: AccessoryId): Ac
   return [...list.filter((a) => ACCESSORIES[a].slot !== slot), id];
 }
 
-/** Coerce unknown (saved, user-edited, plugin-supplied) data into a valid Appearance. */
+/**
+ * Coerce unknown (saved, user-edited, plugin-supplied) data into a valid Appearance.
+ * Palette, eyes, body and accessories are checked against what the species allows; a species
+ * change keeps whatever still fits and falls back to the species defaults for the rest.
+ */
 export function normalizeAppearance(input: unknown): Appearance {
   const src = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
+  const species = getSpecies(hasSpecies(src.species) ? src.species : defaultSpeciesId());
   let accessories: AccessoryId[] = [];
   if (Array.isArray(src.accessories)) {
     for (const a of src.accessories) {
-      if (has(ACCESSORIES, a)) accessories = withAccessory(accessories, a);
+      if (has(ACCESSORIES, a) && species.accessories.includes(a)) {
+        accessories = withAccessory(accessories, a);
+      }
     }
   }
   const size = typeof src.size === 'number' && Number.isFinite(src.size) ? src.size : 1;
+  const eyeOk = (e: unknown): e is EyeStyleId =>
+    has(EYE_STYLES, e) && (species.eyeStyles.length === 0 || species.eyeStyles.includes(e));
+  const bodies = species.bodyShapes ?? [];
+  const bodyOk = (b: unknown): b is BodyShapeId => has(BODY_SHAPES, b) && bodies.includes(b);
   return {
-    palette: has(PALETTES, src.palette) ? src.palette : DEFAULT_APPEARANCE.palette,
-    eyes: has(EYE_STYLES, src.eyes) ? src.eyes : DEFAULT_APPEARANCE.eyes,
-    body: has(BODY_SHAPES, src.body) ? src.body : DEFAULT_APPEARANCE.body,
+    species: species.id,
+    palette: has(species.palettes, src.palette) ? src.palette : species.defaultPalette,
+    eyes: eyeOk(src.eyes) ? src.eyes : (species.eyeStyles[0] ?? DEFAULT_APPEARANCE.eyes),
+    body: bodyOk(src.body) ? src.body : (bodies[0] ?? DEFAULT_APPEARANCE.body),
     accessories,
     size: Math.min(2, Math.max(0.6, size)),
   };

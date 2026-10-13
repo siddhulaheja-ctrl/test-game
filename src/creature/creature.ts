@@ -7,7 +7,6 @@ import {
   BODY_SHAPES,
   DEFAULT_APPEARANCE,
   EYE_STYLES,
-  PALETTES,
   normalizeAppearance,
   type AccessoryId,
   type Appearance,
@@ -19,12 +18,19 @@ import { ExpressionMixer, clampFace, type Expression, type FaceParams } from './
 import { IdleAnimator, type FidgetKind } from './idleAnimator';
 import { ParticleSystem, type ParticleKind } from './particles';
 import { SoftRing, restPoint } from './softBody';
+import './species';
+import { getSpecies } from './species/registry';
+import {
+  DEFAULT_FACE_LAYOUT,
+  type DanglyDef,
+  type FaceLayout,
+  type SpeciesDef,
+} from './species/types';
 import type { HitShape } from '../ui/interactivity';
 
 const GRAVITY = 2000; // px/s² at size 1
 /** Launch speed of a strength-1 hop (≈ 36 px high at size 1). */
 const HOP_SPEED = 380;
-const ANTENNA_SEGMENTS = 4;
 /** Feet stick out this far below the body (units of body radius). */
 export const FEET_HEIGHT = 0.07;
 
@@ -52,6 +58,10 @@ export interface CreaturePose {
   /** Yawn "O" (>0) or tongue blep (<0). */
   mouthRound: number;
   lift: number;
+  /** Hover height above the ground in px (floating species). */
+  hover: number;
+  /** Seconds since the creature was created (for flicker and other time-based drawing). */
+  time: number;
 }
 
 export interface CreatureOptions {
@@ -80,7 +90,8 @@ export class Creature {
   readonly anim: IdleAnimator;
   readonly particles: ParticleSystem;
   readonly ring = new SoftRing();
-  readonly antennae: [VerletChain, VerletChain];
+  /** Dangly chains defined by the species (antennae, gills, flame tongues…), world space. */
+  chains: VerletChain[] = [];
   /** Scarf tail (accessory physics). */
   readonly scarfTail = new VerletChain(4, 1, 0.12, 0.88, 900);
   /** Beanie pom-pom (accessory physics), world px. */
@@ -106,12 +117,7 @@ export class Creature {
       squash: (a) => this.squash(a),
       kickAntennae: (vx, vy) => this.kickAntennae(vx, vy),
     });
-    const seg = () => this.R * 0.15;
-    this.antennae = [
-      new VerletChain(ANTENNA_SEGMENTS + 1, seg(), 0.2, 0.9),
-      new VerletChain(ANTENNA_SEGMENTS + 1, seg(), 0.2, 0.9),
-    ];
-    this.scarfTail.segment = this.R * 0.13;
+    this.applySpecies();
     this.computePose();
   }
 
@@ -120,11 +126,22 @@ export class Creature {
   get R(): number {
     return BASE_RADIUS * this.appearance.size;
   }
+  get species(): SpeciesDef {
+    return getSpecies(this.appearance.species);
+  }
   get palette(): Palette {
-    return PALETTES[this.appearance.palette];
+    const sp = this.species;
+    return sp.palettes[this.appearance.palette] ?? sp.palettes[sp.defaultPalette]!;
   }
   get shape(): BodyShape {
-    return BODY_SHAPES[this.appearance.body];
+    return this.species.shape ?? BODY_SHAPES[this.appearance.body];
+  }
+  get faceLayout(): FaceLayout {
+    return { ...DEFAULT_FACE_LAYOUT, ...this.species.faceLayout };
+  }
+  /** Back-compat alias: Glorp's two antennae are its first two chains. */
+  get antennae(): VerletChain[] {
+    return this.chains;
   }
   get eyeStyle(): EyeStyle {
     return EYE_STYLES[this.appearance.eyes];
@@ -135,10 +152,34 @@ export class Creature {
 
   setAppearance(a: Partial<Appearance>): void {
     this.appearance = normalizeAppearance({ ...this.appearance, ...a });
-    for (const chain of this.antennae) chain.segment = this.R * 0.15;
-    this.scarfTail.segment = this.R * 0.13;
+    this.applySpecies();
     this.primed = false;
     this.computePose();
+  }
+
+  /** Build the species' chains and physics tuning for the current size. */
+  private applySpecies(): void {
+    const sp = this.species;
+    const R = this.R;
+    this.chains = sp.dangly.map(
+      (d) =>
+        new VerletChain(
+          d.segments + 1,
+          d.segLen * R,
+          d.stiffness ?? 0.2,
+          d.friction ?? 0.9,
+          d.gravity ?? 0,
+        ),
+    );
+    this.scarfTail.segment = R * 0.13;
+    const soft = sp.softness ?? 1;
+    this.ring.stiffness = 170 / soft;
+    this.ring.coupling = 420 / soft;
+  }
+
+  /** Ring impulses are scaled by softness so armour barely dents. */
+  private get soft(): number {
+    return this.species.softness ?? 1;
   }
 
   // --- Actions ---------------------------------------------------------------------------------
@@ -156,7 +197,7 @@ export class Creature {
   /** Squash (positive) or stretch (negative) impulse. */
   squash(amount: number): void {
     this.stretch.impulse(-amount * 9);
-    this.ring.impulse(Math.PI / 2, -amount * 2.2, 1.2);
+    this.ring.impulse(Math.PI / 2, -amount * 2.2 * this.soft, 1.2);
   }
 
   /** Poked at a world point: jiggle locally, look surprised, squash. */
@@ -165,7 +206,7 @@ export class Creature {
     const cx = p.feet.x;
     const cy = p.feet.y + p.center.y * p.sy;
     const angle = Math.atan2(wy - cy, wx - cx) - p.angle;
-    this.ring.impulse(angle, -3.2, 0.5);
+    this.ring.impulse(angle, -3.2 * this.soft, 0.5);
     this.squash(0.1);
     this.faceLag.x.impulse(clamp(cx - wx, -30, 30) * 2);
     this.kickAntennae((wx < cx ? 1 : -1) * 2.5, -2);
@@ -194,8 +235,7 @@ export class Creature {
 
   kickAntennae(vx: number, vy: number): void {
     const s = this.appearance.size;
-    this.antennae[0].kick(vx * s, vy * s);
-    this.antennae[1].kick(vx * s, vy * s);
+    for (const chain of this.chains) chain.kick(vx * s, vy * s);
   }
 
   /** Look toward a world point (or stop with null). */
@@ -267,7 +307,7 @@ export class Creature {
         this.stretch.target = 0;
         this.stretch.impulse(1.6 * this.hopQueue.strength);
         this.faceLag.y.impulse(v * 0.1);
-        this.ring.inertia(0, 1.1);
+        this.ring.inertia(0, 1.1 * this.soft);
         this.kickAntennae(0, 3 * this.hopQueue.strength);
         this.hopQueue = null;
       }
@@ -294,8 +334,8 @@ export class Creature {
     this.liftV = 0;
     const k = clamp(impact / HOP_SPEED, 0, 2.5);
     this.stretch.impulse(-k * 1.9);
-    this.ring.impulse(Math.PI / 2, -k * 1.6, 0.7);
-    this.ring.inertia(0, k * 1.4);
+    this.ring.impulse(Math.PI / 2, -k * 1.6 * this.soft, 0.7);
+    this.ring.inertia(0, k * 1.4 * this.soft);
     this.faceLag.y.impulse(k * 50);
     this.kickAntennae(0, k * 4);
     if (k > 0.35) this.emit('dust', Math.round(2 + k * 3));
@@ -303,15 +343,12 @@ export class Creature {
 
   /** Antennae, pom-pom and scarf tail follow the body in world space. */
   private updateDangly(dt: number): void {
-    const restA = this.antennaRest(0);
-    const restB = this.antennaRest(1);
-    if (!this.primed) {
-      this.antennae[0].reset(restA);
-      this.antennae[1].reset(restB);
-    } else {
-      this.antennae[0].step(restA, dt);
-      this.antennae[1].step(restB, dt);
-    }
+    const defs = this.species.dangly;
+    this.chains.forEach((chain, i) => {
+      const rest = this.chainRest(defs[i]!);
+      if (!this.primed) chain.reset(rest);
+      else chain.step(rest, dt);
+    });
     const pom = this.pompomAnchor();
     if (!this.primed) this.pompom.snap(pom.x, pom.y);
     this.pompom.setTarget(pom.x, pom.y);
@@ -331,21 +368,20 @@ export class Creature {
     return { x: pose.feet.x + x * c - y * s, y: pose.feet.y + x * s + y * c };
   }
 
-  /** Rest pose of an antenna chain in world space. side 0 = left, 1 = right. */
-  antennaRest(side: 0 | 1): Vec2[] {
+  /** Rest pose of a dangly chain in world space. */
+  chainRest(d: DanglyDef): Vec2[] {
     const p = this.pose;
     const R = p.R;
-    const dir = side === 0 ? -1 : 1;
-    const local = restPoint(this.shape, -Math.PI / 2 + dir * 0.42);
-    const root = this.toWorld(local.x * R * 0.9, p.center.y + local.y * R * 0.9);
-    // Weird-but-cute: the left antenna is always a little floppier.
-    const droop = clamp(p.face.droop + (side === 0 ? 0.15 : 0), 0, 1.1);
+    const local = restPoint(this.shape, d.rootAngle);
+    const root = this.toWorld(local.x * R * d.rootInset, p.center.y + local.y * R * d.rootInset);
+    const droop = clamp(p.face.droop + (d.droopBias ?? 0), 0, 1.1);
     const pts: Vec2[] = [root];
-    let a = -Math.PI / 2 + dir * 0.36 + p.angle;
+    let a = d.restAngle + p.angle;
     let cur = root;
-    const seg = R * 0.15;
-    for (let i = 1; i <= ANTENNA_SEGMENTS; i++) {
-      a += dir * (0.1 + droop * (0.28 + 0.12 * i));
+    const seg = R * d.segLen;
+    for (let i = 1; i <= d.segments; i++) {
+      // Droop bends later segments more (0.28 + 0.12·i for Glorp's antennae).
+      a += d.curl + droop * d.droopCurl * (1 + 0.43 * i);
       cur = { x: cur.x + Math.cos(a) * seg, y: cur.y + Math.sin(a) * seg };
       pts.push(cur);
     }
@@ -391,6 +427,8 @@ export class Creature {
     const sx = 1 - (this.stretch.value + airStretch) * 0.65 - L.breathe * 0.45;
 
     const angle = face.tilt * 0.2 + L.sway * 0.09;
+    const hoverAmt = this.species.hover ?? 0;
+    const hover = hoverAmt > 0 ? R * hoverAmt * (1 + 0.14 * Math.sin(this.time * 2.1)) : 0;
     const center = { x: 0, y: -(this.shape.ryBottom + FEET_HEIGHT) * R };
     const armRest = 1.15;
     const armUp = -0.75;
@@ -399,7 +437,7 @@ export class Creature {
 
     this.pose = {
       R,
-      feet: { x: this.x, y: this.y - this.lift },
+      feet: { x: this.x, y: this.y - this.lift - hover },
       groundY: this.y,
       sx,
       sy,
@@ -415,6 +453,8 @@ export class Creature {
       arms: [Math.PI - arm, arm + wave],
       mouthRound: L.mouthRound,
       lift: this.lift,
+      hover,
+      time: this.time,
     };
   }
 
@@ -452,7 +492,7 @@ export class Creature {
    * (under ~0.5 px per step) doesn't count: it still looks smooth at the idle frame rate.
    */
   activity(): number {
-    const antennae = this.antennae[0].motion() + this.antennae[1].motion();
+    const antennae = this.chains.reduce((m, c) => m + c.motion(), 0);
     return (
       Math.abs(this.stretch.velocity) +
       this.ring.energy() +

@@ -3,16 +3,13 @@ import {
   ACCESSORIES,
   BODY_SHAPES,
   EYE_STYLES,
-  PALETTES,
   normalizeAppearance,
   withAccessory,
   type AccessoryId,
   type Appearance,
-  type BodyShapeId,
-  type EyeStyleId,
-  type PaletteId,
 } from '../../creature/appearance';
 import { Creature } from '../../creature/creature';
+import { listSpecies } from '../../creature/species';
 import {
   EXPRESSION_NAMES,
   FACE_KEYS,
@@ -137,47 +134,77 @@ window.addEventListener('resize', layout);
 const controls = document.getElementById('controls')!;
 
 function buildControls(): void {
-  // Appearance
-  const ap = section(controls, 'Appearance');
+  // Character and appearance
+  const ap = section(controls, 'Character & appearance');
   select(
     ap,
-    'Palette',
-    Object.values(PALETTES).map((p) => ({ value: p.id as PaletteId, label: p.name })),
-    state.appearance.palette,
-    (v) => setAppearance({ palette: v }),
+    'Character',
+    listSpecies().map((sp) => ({ value: sp.id, label: sp.name })),
+    state.appearance.species,
+    (v) => {
+      setAppearance({ species: v });
+      buildAppearance();
+    },
   );
-  select(
-    ap,
-    'Eyes',
-    Object.values(EYE_STYLES).map((p) => ({ value: p.id as EyeStyleId, label: p.name })),
-    state.appearance.eyes,
-    (v) => setAppearance({ eyes: v }),
-  );
-  select(
-    ap,
-    'Body',
-    Object.values(BODY_SHAPES).map((p) => ({ value: p.id as BodyShapeId, label: p.name })),
-    state.appearance.body,
-    (v) => setAppearance({ body: v }),
-  );
-  slider(ap, 'Size', { min: 0.6, max: 2, step: 0.05, value: state.appearance.size }, (v) =>
-    setAppearance({ size: v }),
-  );
-  ap.append(el('div', { className: 'hint', textContent: 'Accessories (one per slot)' }));
-  const checks = el('div', { className: 'checks' });
-  ap.append(checks);
-  const accBoxes = new Map<AccessoryId, HTMLInputElement>();
-  for (const acc of Object.values(ACCESSORIES)) {
-    const id = acc.id as AccessoryId;
-    const box = checkbox(checks, acc.name, state.appearance.accessories.includes(id), (on) => {
-      const list = on
-        ? withAccessory(state.appearance.accessories, id)
-        : state.appearance.accessories.filter((a) => a !== id);
-      setAppearance({ accessories: list });
-      for (const [other, b] of accBoxes) b.checked = state.appearance.accessories.includes(other);
-    });
-    accBoxes.set(id, box);
+  const tagline = el('div', { className: 'hint' });
+  ap.append(tagline);
+  const apBody = el('div');
+  ap.append(apBody);
+  function buildAppearance(): void {
+    apBody.textContent = '';
+    const sp = creature.species;
+    tagline.textContent = sp.tagline;
+    select(
+      apBody,
+      'Palette',
+      Object.values(sp.palettes).map((p) => ({ value: p.id, label: p.name })),
+      state.appearance.palette,
+      (v) => setAppearance({ palette: v }),
+    );
+    if (sp.eyeStyles.length > 1) {
+      select(
+        apBody,
+        'Eyes',
+        sp.eyeStyles.map((id) => ({ value: id, label: EYE_STYLES[id].name })),
+        state.appearance.eyes,
+        (v) => setAppearance({ eyes: v }),
+      );
+    }
+    if (!sp.shape && sp.bodyShapes && sp.bodyShapes.length > 1) {
+      select(
+        apBody,
+        'Body',
+        sp.bodyShapes.map((id) => ({ value: id, label: BODY_SHAPES[id].name })),
+        state.appearance.body,
+        (v) => setAppearance({ body: v }),
+      );
+    }
+    slider(apBody, 'Size', { min: 0.6, max: 2, step: 0.05, value: state.appearance.size }, (v) =>
+      setAppearance({ size: v }),
+    );
+    if (sp.accessories.length === 0) return;
+    apBody.append(el('div', { className: 'hint', textContent: 'Accessories (one per slot)' }));
+    const checks = el('div', { className: 'checks' });
+    apBody.append(checks);
+    const accBoxes = new Map<AccessoryId, HTMLInputElement>();
+    for (const id of sp.accessories) {
+      const box = checkbox(
+        checks,
+        ACCESSORIES[id].name,
+        state.appearance.accessories.includes(id),
+        (on) => {
+          const list = on
+            ? withAccessory(state.appearance.accessories, id)
+            : state.appearance.accessories.filter((a) => a !== id);
+          setAppearance({ accessories: list });
+          for (const [other, bx] of accBoxes)
+            bx.checked = state.appearance.accessories.includes(other);
+        },
+      );
+      accBoxes.set(id, box);
+    }
   }
+  buildAppearance();
 
   // Expressions
   const ex = section(controls, 'Expressions');
