@@ -98,7 +98,7 @@ export class OverlayWindow {
     this.interactive = false;
     this.lastApplied = Date.now();
     this.win.setIgnoreMouseEvents(true, { forward: true });
-    this.raise();
+    this.win.setAlwaysOnTop(true, 'screen-saver');
     this.win.webContents.send(IPC.inputReset);
   }
 

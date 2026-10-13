@@ -4,6 +4,7 @@ import type { WindowInfo } from '../../world/world';
 import {
   filterWindows,
   isShellClass,
+  type FullscreenApp,
   type RawWindow,
   type WindowProvider,
 } from '../windowProvider';
@@ -136,11 +137,14 @@ export class Win32Windows implements WindowProvider {
     return r ? this.toDip(r) : null;
   }
 
-  fullscreen(): Rect[] {
+  fullscreen(): FullscreenApp[] {
     const fg = this.api.GetForegroundWindow();
     if (!fg || koffi.address(fg) === 0n) return [];
     const id = (koffi.address(fg) as bigint).toString(16);
-    if (this.own.has(id) || isShellClass(this.className(fg))) return [];
+    const className = this.className(fg);
+    // A minimised app can stay "foreground" until something else is clicked: it isn't in front.
+    if (this.own.has(id) || isShellClass(className) || this.api.IsIconic(fg)) return [];
+    if (!this.api.IsWindowVisible(fg) || this.cloaked(fg)) return [];
     const state = [0];
     this.api.SHQueryUserNotificationState(state);
     const busy = [QUNS_BUSY, QUNS_RUNNING_D3D_FULL_SCREEN, QUNS_PRESENTATION_MODE].includes(
@@ -149,7 +153,7 @@ export class Win32Windows implements WindowProvider {
     const r = this.rect(fg);
     // Main decides which display it covers; report the foreground rectangle when the shell says
     // something is fullscreen, or when it may cover a whole display on its own.
-    return r && (busy || r.width >= 640) ? [this.toDip(r)] : [];
+    return r && (busy || r.width >= 640) ? [{ ...this.toDip(r), className }] : [];
   }
 
   windowAt(x: number, y: number): { own: boolean; className: string } | null {

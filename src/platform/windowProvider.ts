@@ -14,8 +14,8 @@ export interface WindowProvider {
   list(): WindowInfo[];
   /** Current bounds of one window (fast path while a pet rides it), or null if it's gone. */
   bounds(id: string): Rect | null;
-  /** Bounds (DIP) of fullscreen apps currently in front, if any. */
-  fullscreen(): Rect[];
+  /** Bounds (DIP) of fullscreen apps currently in front, if any, with their window class. */
+  fullscreen(): FullscreenApp[];
   /** Left mouse button held down, where the OS can say so globally; null if unknown. */
   leftButtonDown(): boolean | null;
   /** Window handles of our own overlays, so they are never listed. */
@@ -25,6 +25,10 @@ export interface WindowProvider {
    * (by class name only). Optional; used to notice when something covers the pets.
    */
   windowAt?(x: number, y: number): { own: boolean; className: string } | null;
+}
+
+export interface FullscreenApp extends Rect {
+  className?: string;
 }
 
 /** Raw facts about a top-level window, before filtering. */
@@ -89,7 +93,7 @@ export class NoWindows implements WindowProvider {
   bounds(): Rect | null {
     return null;
   }
-  fullscreen(): Rect[] {
+  fullscreen(): FullscreenApp[] {
     return [];
   }
   leftButtonDown(): boolean | null {
@@ -117,8 +121,8 @@ export class FakeWindows implements WindowProvider {
     const w = this.windows.find((q) => q.id === id);
     return w ? { ...w.bounds } : null;
   }
-  fullscreen(): Rect[] {
-    return this.fullscreenRects.map((r) => ({ ...r }));
+  fullscreen(): FullscreenApp[] {
+    return this.fullscreenRects.map((r) => ({ ...r, className: 'FakeFullscreen' }));
   }
   leftButtonDown(): boolean | null {
     return null;

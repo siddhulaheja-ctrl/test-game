@@ -10,7 +10,12 @@ import {
   type OverlayInfo,
   type ProcessMetrics,
 } from '../shared/ipc';
-import { FakeWindows, NoWindows, type WindowProvider } from '../platform/windowProvider';
+import {
+  FakeWindows,
+  NoWindows,
+  type FullscreenApp,
+  type WindowProvider,
+} from '../platform/windowProvider';
 import { Win32Windows } from '../platform/win32/win32Windows';
 import { bottom, right, sameRect, type Rect } from '../world/geometry';
 import type { WindowInfo, WorldSnapshot } from '../world/world';
@@ -38,6 +43,9 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   void app.whenReady().then(start);
 }
+
+/** One-line status messages in the terminal that started the app (no window titles, ever). */
+const log = (msg: string) => console.info(`[buddy] ${msg}`);
 
 function createWindowProvider(): WindowProvider {
   if (process.env.BUDDY_FAKE_WINDOWS === '1') return new FakeWindows();
@@ -185,6 +193,7 @@ function start(): void {
     state = { ...state, ...patch };
     settings.save(state);
     tray.update(state);
+    tray.setStatus(statusText());
     applyVisibility();
     broadcast(IPC.appState, state);
     syncCharacters();
@@ -312,6 +321,7 @@ function start(): void {
     if (hit && !hit.own && now - lastRaise > 1000) {
       lastRaise = now;
       diag.raised++;
+      log(`a window (${hit.className || 'unknown'}) covered the pets: putting them back on top`);
       hovered.raise();
     }
   }
@@ -375,7 +385,7 @@ function start(): void {
   }
 
   function pollFullscreen(): void {
-    let rects: Rect[] = [];
+    let rects: FullscreenApp[] = [];
     try {
       rects = windows.fullscreen();
     } catch {
@@ -394,10 +404,22 @@ function start(): void {
       )
       .map((d) => d.id);
     if (covered.join() === fullscreen.join()) return;
+    const ended = fullscreen.filter((id) => !covered.includes(id));
     fullscreen = covered;
+    const app = rects[0]?.className ?? 'unknown';
+    if (covered.length) {
+      log(
+        `fullscreen app (${app}) on display ${covered.join(', ')}: ` +
+          (state.fullscreenMode === 'hide' ? 'hiding pets there' : 'pets go quiet'),
+      );
+    } else log('fullscreen app gone: pets back');
     applyVisibility();
-    // Fullscreen apps coming and going can knock the overlays off the top: put them back.
-    for (const o of overlays.values()) if (o.win.isVisible()) o.raise();
+    // A fullscreen app going away can leave the overlays below other windows: put them back.
+    for (const id of ended) {
+      const o = overlays.get(id);
+      if (o?.win.isVisible()) o.raise();
+    }
+    tray.setStatus(statusText());
     for (const id of overlays.keys()) sendTo(id, IPC.displayFlags, { fullscreen });
   }
 
@@ -423,12 +445,28 @@ function start(): void {
     });
   }
 
+  function statusText(): string {
+    if (!state.visible) return 'Pets hidden (Show Buddy to bring them back)';
+    if (state.fullscreenMode === 'hide' && fullscreen.length) {
+      return 'Pets hidden while a fullscreen app is open';
+    }
+    const n = owners.size;
+    return n ? `${n} pet${n === 1 ? '' : 's'} out` : 'No characters chosen';
+  }
+
   // --- Start ------------------------------------------------------------------------------------
+  log(`window access: ${windows.name}`);
   windowList = readWindows();
   syncOverlays();
   syncCharacters();
   displays.onChange(() => syncOverlays());
   restartTimers();
+  for (const o of overlays.values()) {
+    const b = o.info.workArea;
+    log(`overlay for display ${o.info.id}: ${b.width}x${b.height} at ${b.x},${b.y}`);
+  }
+  log(`characters: ${state.characters.join(', ') || 'none'}${state.visible ? '' : ' (hidden)'}`);
+  tray.setStatus(statusText());
 
   app.on('second-instance', () => setState({ visible: true }));
   app.on('before-quit', () => {

@@ -29,9 +29,11 @@ export function createTrayImage(): Electron.NativeImage {
 export function trayMenuTemplate(
   state: AppState,
   actions: TrayActions,
+  status = '',
 ): MenuItemConstructorOptions[] {
   return [
     { id: 'title', label: 'Desktop Buddy', enabled: false },
+    { id: 'status', label: status, enabled: false },
     { type: 'separator' },
     {
       id: 'toggle-visible',
@@ -108,8 +110,19 @@ export class BuddyTray {
     this.tray.on('click', () => actions.toggleVisible());
   }
 
+  private state: AppState | null = null;
+  private status = '';
+
+  /** A one-line status shown greyed out under the title (e.g. why the pets are hidden). */
+  setStatus(status: string): void {
+    if (status === this.status) return;
+    this.status = status;
+    if (this.state) this.update(this.state);
+  }
+
   update(state: AppState): void {
-    this.menu = Menu.buildFromTemplate(trayMenuTemplate(state, this.actions));
+    this.state = state;
+    this.menu = Menu.buildFromTemplate(trayMenuTemplate(state, this.actions, this.status));
     this.tray.setContextMenu(this.menu);
     this.tray.setToolTip(state.quietMode ? 'Desktop Buddy (quiet)' : 'Desktop Buddy');
   }
